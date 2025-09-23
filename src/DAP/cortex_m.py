@@ -1,10 +1,14 @@
+import copy
+import ctypes
+
+
 """
 调试寄存器定义
 """
 class DEBUG_REG:
     # 调试停机控制及状态寄存器 (Debug Halting Control and Status Register)
     # 地址: 0xE000EDF0
-    DHCSR = 0xE000EDF0  
+    DHCSR = 0xE000EDF0
     """
     DHCSR寄存器位定义:
     位段    名称           类型  复位值  描述
@@ -26,7 +30,7 @@ class DEBUG_REG:
 
     # 调试内核寄存器选择者寄存器 (Debug Core Register Selector Register)
     # 地址: 0xE000EDF4
-    DCRSR = 0xE000EDF4  
+    DCRSR = 0xE000EDF4
     """
     DCRSR寄存器位定义:
     位段    名称           类型  复位值  描述
@@ -44,7 +48,7 @@ class DEBUG_REG:
 
     # 调试内核寄存器数据寄存器 (Debug Core Register Data Register)
     # 地址: 0xE000EDF8
-    DCRDR = 0xE000EDF8  
+    DCRDR = 0xE000EDF8
     """
     DCRDR寄存器位定义:
     位段    名称           类型  复位值  描述
@@ -53,7 +57,7 @@ class DEBUG_REG:
 
     # 调试异常及监视器控制寄存器 (Debug Exception and Monitor Control Register)
     # 地址: 0xE000EDFC
-    DEMCR = 0xE000EDFC  
+    DEMCR = 0xE000EDFC
     """
     DEMCR寄存器位定义:
     位段    名称           类型  复位值  描述
@@ -74,6 +78,24 @@ class DEBUG_REG:
     3:1     保留          -     -       保留位
     0       VC_CORERESET  RW    0*      发生内核复位时停机调试
     """
+
+"""
+ROM Table
+"""
+class ROM_TABLE:
+    component = {
+        'BASE_ADDR': 0xE00FF000,
+        'SCS_BASE':  0x00000000,
+        'DWT_BASE':  0x00000000,
+        'FPB_BASE':  0x00000000,
+        'ITM_BASE':  0x00000000,
+        'TPIU_BASE': 0x00000000,
+        'ETM_BASE':  0x00000000,
+    }
+
+    def get_component_table(self):
+        return copy.deepcopy(self.component)
+
 
 """
 系统控制块寄存器定义
@@ -146,4 +168,29 @@ class SCB_REG:
     @property
     def AFSR(self):
         return self.base_address + 0x03C  # 辅助故障状态寄存器
-    
+
+
+class ExecuteOperation(ctypes.LittleEndianStructure):
+    _fields_ = [
+        ('r0',      ctypes.c_uint32),           # R0 argument 1
+        ('r1',      ctypes.c_uint32),           # R1 argument 2
+        ('r2',      ctypes.c_uint32),           # R2 argument 3
+        ('r3',      ctypes.c_uint32),           # R3 argument 4
+        ('r9',      ctypes.c_uint32),           # R9 static base pointer
+        ('r13',     ctypes.c_uint32),           # R13 stack pointer
+        ('r14',     ctypes.c_uint32),           # R14 link register
+        ('r15',     ctypes.c_uint32),           # R15 program counter
+        ('xpsr',    ctypes.c_uint32),           # Program status register
+        ('timeout', ctypes.c_uint32),           # Timeout value in milliseconds
+    ]
+    def __init__(self):
+        self.r0 = 0
+        self.r1 = 0
+        self.r2 = 0
+        self.r3 = 0
+        self.r9 = 0
+        self.r13 = 0
+        self.r14 = 0
+        self.r15 = 0
+        self.xpsr = 0x01000000      # 例如 Thumb 状态位
+        self.timeout = 100          # 默认超时时间100ms

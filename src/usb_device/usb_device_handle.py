@@ -1,6 +1,7 @@
 import usb.core
 import usb.util
 from usb_device.usb_device_info import USBDeviceInfo
+import logging
 
 class USBDeviceHandle(USBDeviceInfo):
     def __init__(self):
@@ -43,8 +44,8 @@ class USBDeviceHandle(USBDeviceInfo):
     def print_dap_devices(self, dap_devices):
         if dap_devices:
             for i, dap_device in enumerate(dap_devices):
-                print(f"index: {i} VID: 0x{dap_device['vid']:04X} PID: 0x{dap_device['pid']:04X} ", \
-                        f"{dap_device['intf_desc']} SN: {dap_device['serial_number']}")
+                logging.info(f"index: {i} VID: 0x{dap_device['vid']:04X} PID: 0x{dap_device['pid']:04X} "
+                             f"{dap_device['intf_desc']} SN: {dap_device['serial_number']}")
             
     def select_dap_device_by_index(self, index):
         if index < len(self.dap_devices_list):
@@ -73,26 +74,56 @@ class USBDeviceHandle(USBDeviceInfo):
         
         return False
     
+    def select_dap_device_by_intf_desc_and_sn(self, intf_desc, serial_number):
+        for i, dap_device in enumerate(self.dap_devices_list):
+            if dap_device['intf_desc'] == intf_desc and dap_device['serial_number'] == serial_number:
+                self.select_dap_device_index = i
+                self._print_selected_dap_device()
+                return True
+        
+        return False
+    
     def _print_selected_dap_device(self):
         if self.select_dap_device_index < len(self.dap_devices_list):
             dap_device = self.dap_devices_list[self.select_dap_device_index]
-            print(f"Selected Device - index: {self.select_dap_device_index} VID: 0x{dap_device['vid']:04X} PID: 0x{dap_device['pid']:04X} ", \
-                    f"{dap_device['intf_desc']} SN: {dap_device['serial_number']}")
+            logging.info(f"Selected Device - index: {self.select_dap_device_index} VID: 0x{dap_device['vid']:04X} PID: 0x{dap_device['pid']:04X} "
+                         f"{dap_device['intf_desc']} SN: {dap_device['serial_number']}")
         else:
-            print("No device selected or index out of range.")
+            logging.error("No device selected or index out of range.")
 
     def config_dap_device(self):
         if self.select_dap_device_index == 0xFF:
-            print("No DAP device selected.")
+            logging.error("No DAP device selected.")
             return False
         dap_device = self.dap_devices_list[self.select_dap_device_index]
         if self._check_dap_device_is_configured(dap_device) is False:
-            if self._config_dap_device(dap_device):
-                pass
-            else:
+            if self._config_dap_device(dap_device) is False:
                 return False
         self.reset_dap_device(dap_device)
         self.clean_in_ep()
+        return True
+    
+    def unconfig_dap_device(self):
+        if self.select_dap_device_index == 0xFF:
+            logging.error("No DAP device selected.")
+            return False
+        dap_device = self.dap_devices_list[self.select_dap_device_index]
+        if self._check_dap_device_is_configured(dap_device) is True:
+            try:
+                usb.util.release_interface(dap_device['device'], dap_device['interface'])
+                usb.util.dispose_resources(dap_device['device'])
+            except Exception:
+                return False
+        return True
+    
+    def unconfig_all_dap_devices(self):
+        for dap_device in self.dap_devices_list:
+            if self._check_dap_device_is_configured(dap_device) is True:
+                try:
+                    usb.util.release_interface(dap_device['device'], dap_device['interface'])
+                    usb.util.dispose_resources(dap_device['device'])
+                except Exception:
+                    return False
         return True
         
     def _check_dap_device_is_configured(self, dap_device):
@@ -101,7 +132,7 @@ class USBDeviceHandle(USBDeviceInfo):
         if dev:
             try:
                 current_cfg = usb.control.get_configuration(dev)
-                if current_cfg ==cfg:
+                if current_cfg == cfg:
                     return True
             except Exception:
                 return False
@@ -114,6 +145,7 @@ class USBDeviceHandle(USBDeviceInfo):
         if dev and cfg is not None:
             try:
                 dev.set_configuration(cfg)
+                
                 if self._check_dap_device_is_configured(dap_device):
                     return True
             except Exception:

@@ -1,9 +1,10 @@
 import usb.core
 import usb.util
 from usb_device.usb_device_handle import USBDeviceHandle
-from .cortex_m import DEBUG_REG, SCB_REG
+from .cortex_m import DEBUG_REG, SCB_REG, ROM_TABLE, ExecuteOperation
 import time
-    
+import logging
+
 
 """
 DAPHandler类用于处理DAP设备的连接、配置和操作。
@@ -12,7 +13,7 @@ class DAPHandler:
     def __init__(self):
         self.usb_device_handle = USBDeviceHandle()
         self.dap_swj_clock = 5000000  # DAP SWJ时钟频率，默认5MHz
-        self.dap_packet_size = 512  # DAP数据包大小，默认512字节
+        self.dap_packet_size = 64  # DAP数据包大小，默认64字节
         self.dap_packet_count = 64   # DAP数据包数量，默认64个
         self.firmware_version = "Unknown"  # DAP固件版本
 
@@ -29,313 +30,579 @@ class DAPHandler:
         self.dap_caps = 0x00
 
         self.debug_id = "Unknown"  # 目标调试ID
+        self.ap_id = "Unknown"  # 目标APID
         self.cpu_id = "Unknown"  # 目标CPUID
 
-        """ 
-        CoreSigth ROM Table
-        """
-        self._coresight_rom_table = {
-            'BASE_ADDR':    0x00000000,     # ROM Table基地址
-            'SCS_BASE':     0x00000000,     # 系统控制空间基地址
-            'DWT_BASE':     0x00000000,     # 数据观察跟踪基地址
-            'FPB_BASE':     0x00000000,     # Flash断点单元基地址
-            'ITM_BASE':     0x00000000,     # 仪表跟踪宏基地址
-            'TPIU_BASE':    0x00000000,     # 跟踪端口接口单元基地址
-            'ETM_BASE':     0x00000000,     # 嵌入式跟踪宏基地址
-        }
+        self._coresight_component_table = ROM_TABLE().get_component_table()
+
+    @property
+    def get_selected_dap_device(self):
+        return self.usb_device_handle.get_selected_dap_device
 
     def get_dap_devices(self):
         return self.usb_device_handle.get_dap_devices()
-    
+
     def select_dap_device_by_index(self, device_index=0):
         return self.usb_device_handle.select_dap_device_by_index(device_index)
-    
+
     def select_dap_device_by_sn(self, serial_number):
         return self.usb_device_handle.select_dap_device_by_sn(serial_number)
-    
+
+    def select_dap_device_by_intf_desc_and_sn(self, intf_desc, serial_number):
+        return self.usb_device_handle.select_dap_device_by_intf_desc_and_sn(intf_desc, serial_number)
+
     def config_dap_device(self):
         return self.usb_device_handle.config_dap_device()
-    
+
+    def unconfig_dap_device(self):
+        return self.usb_device_handle.unconfig_dap_device()
+
+    def unconfig_all_dap_devices(self):
+        return self.usb_device_handle.unconfig_all_dap_devices()
+
     def set_dap_swj_clock(self, clock_hz=5000000):
         if clock_hz == 0:
             clock_hz = self.dap_swj_clock
         self.dap_swj_clock = clock_hz
 
-    def get_target_id(self):
-        self._steup_swj_sequence(self.dap_swj_clock)
-        if self.debug_id == 'Unknown':
-            raise RuntimeError("Failed to retrieve debug ID.")
-        
-        self._write_dp_abort(0x1E) # 清除Abort状态
-        self._write_dp_ctrl_stat(0x50000000) # 设置DP控制状态寄存器
-        if (self._read_dp_ctrl_stat() >> 24) & 0xF0 != 0xF0:
-            raise RuntimeError("Failed to set DP control status register.")
-        self._write_dp_ctrl_stat(0x50000F00) # 设置DP控制状态寄存器
-        self._write_dp_select(0x00000000)
+    def get_target_id(self) -> bool:
+        if self._read_target_id() is False:
+            return False
 
-        self._write_ap_csw(0x23000052)  # 写AP CSW寄存器
+        if self._stop_dap_device() is False:
+            return False
 
-        self._get_coresight_rom_table()
-        scb_reg = SCB_REG(self._coresight_rom_table['SCS_BASE'])
-        cpu_id = self._read_reg(scb_reg.CPUID)  # 读取CPUID寄存器
-        self.cpu_id = 'Unknown'
-        self.cpu_id = f"0x{cpu_id:08X}"
+        logging.info(f"Debug ID: {self.debug_id}, AP ID: {self.ap_id}, CPU ID: {self.cpu_id}")
 
-        if self._set_dap_host_status('connect_off') is False:
-            raise RuntimeError("Failed to set host status(connect off).")
-        
-        if self._disconnect_dap_device() is False:
-            raise RuntimeError("Failed to disconnect DAP device.")
-        
-        print(f"Debug ID: {self.debug_id}, CPU ID: {self.cpu_id}")
+        return True
 
-    def reset_target(self, reset_mode='software'):
-        self._steup_swj_sequence(self.dap_swj_clock)
-        if self.debug_id == 'Unknown':
-            raise RuntimeError("Failed to retrieve debug ID.")
-        
+    def reset_target(self, reset_mode='software') -> bool:
+        if self._read_target_id() is False:
+            return False
+
         if reset_mode not in ['hardware', 'software']:
-            raise ValueError("Invalid reset mode. Use 'hardware' or 'software'.")
-        
-        if reset_mode == 'software':
-            self._write_dp_abort(0x1E) # 清除Abort状态
-            self._write_dp_ctrl_stat(0x50000000) # 设置DP控制状态寄存器, power on
-            # 读出DP控制状态寄存器，检查是否设置成功
-            if (self._read_dp_ctrl_stat() >> 24) & 0xF0 != 0xF0:
-                raise RuntimeError("Failed to set DP control status register.")
-            self._write_dp_ctrl_stat(0x50000F00) # 设置DP控制状态寄存器，masklane
-            self._write_dp_select(0x00000000)
-            self._write_ap_csw(0x23000052)  # 写AP CSW寄存器
-            self._get_coresight_rom_table()
-            scb_reg = SCB_REG(self._coresight_rom_table['SCS_BASE'])
+            logging.error("Invalid reset mode. Use 'hardware' or 'software'.")
+            return False
 
-            self._write_reg(DEBUG_REG.DHCSR, 0xA05F0003)  # 使能停机模式的调试，停机处理器
-            self._write_reg(DEBUG_REG.DEMCR, 0x00000001)  # 发生内核复位时停机调试
-            while True:
-                scb_aircr = self._read_reg(scb_reg.AIRCR)  # 读出AIRCR寄存器
-                self._write_reg(scb_reg.AIRCR, ((0x05FA << 16) | \
-                                                (scb_aircr & (0x7 << 8)) | \
-                                                (0x1 << 2)))  # 软件复位
-                
-                time.sleep(0.05)  # 等待复位完成
-                debug_dhcsr = self._read_reg(DEBUG_REG.DHCSR)  # 读出DHCSR寄存器，确保复位完成
-                print(f"DHCSR: 0x{debug_dhcsr:08X}")
-                if (debug_dhcsr & 0x00020000) != 0:
-                    break
+        if reset_mode == 'software':
+            scb_reg = SCB_REG(self._coresight_component_table['SCS_BASE'])
+
+            if self._reset_and_halt_target() is False:
+                return False
             self._write_reg(DEBUG_REG.DEMCR, 0x00000000)
             scb_aircr = self._read_reg(scb_reg.AIRCR)  # 读出AIRCR寄存器
             self._write_reg(scb_reg.AIRCR, ((0x05FA << 16) | \
                                                 (scb_aircr & (0x7 << 8)) | \
                                                 (0x1 << 2)))  # 软件复位
-                
+
             time.sleep(0.05)  # 等待复位完成
         else:
+            retry_count = 10
             while True:
                 self._set_dap_swj_pin(0x00, 0x80, 0x00000000)
                 time.sleep(0.05)
                 self._set_dap_swj_pin(0x80, 0x80, 0x00000000)
                 res = self._set_dap_swj_pin(0x00, 0x00, 0x00000000)
                 time.sleep(0.05)
-                if res & 0x80:
+                retry_count -= 1
+                if (res & 0x80) | (retry_count <= 0):
                     break
 
-        if self._set_dap_host_status('connect_off') is False:
-            raise RuntimeError("Failed to set host status(connect off).")
-        
-        if self._disconnect_dap_device() is False:
-            raise RuntimeError("Failed to disconnect DAP device.")
+        if self._stop_dap_device() is False:
+            return False
 
-    def _steup_swj_sequence(self, swj_clock=5000000):
+        return True
+
+    def download_algorithm(self, start_addr, algorithm, algorithm_size, verify_flag: bool) -> bool:
+        """
+        注意使用该函数结束不会停止DAP设备。
+        """
+        if self._reset_and_halt_target() is False:
+                return False
+        if not algorithm:
+            return False
+        algorithm_size = (algorithm_size + 4 -1) // 4
+        use_for_data_size = self.dap_packet_size - 5
+        use_for_data_size = ((use_for_data_size - (use_for_data_size % 4)) & 0xFFFF) // 4
+        if self._set_write_address(start_addr) is False:
+            return False
+        transfer_count = (algorithm_size + use_for_data_size - 1) // use_for_data_size
+        start_index = 0
+        end_index = 0
+        verify_value = self.get_xor_value(algorithm, algorithm_size)
+        buffer = usb.util.create_buffer(self.dap_packet_size)
+        for _ in range(transfer_count//self.dap_packet_count):
+            for _ in range(self.dap_packet_count):
+                end_index = start_index + use_for_data_size
+                if self._dap_transfer_block(0x00, use_for_data_size, 0x0D, algorithm[start_index:end_index]) is False:
+                    return False
+                start_index += use_for_data_size
+            for _ in range(self.dap_packet_count):
+                read_len = self.usb_device_handle.receive_data_from_dap_device(buffer, timeout=100)
+                if read_len is None or read_len == 0:
+                    return False
+                if self._check_dap_transfer_block_response(buffer[1:read_len]) != self.TRANSFER_RESPONSE['OK']:
+                    return False
+        rest_count = transfer_count % self.dap_packet_count
+        for _ in range(rest_count - 1):
+            end_index = start_index + use_for_data_size
+            if self._dap_transfer_block(0x00, use_for_data_size, 0x0D, algorithm[start_index:end_index]) is False:
+                return False
+            start_index += use_for_data_size
+        end_index = start_index + (algorithm_size % use_for_data_size)
+        if self._dap_transfer_block(0x00, algorithm_size % use_for_data_size, 0x0D, algorithm[start_index:end_index]) is False:
+            return False
+        for i in range(transfer_count):
+            read_len = self.usb_device_handle.receive_data_from_dap_device(buffer, timeout=100)
+            if read_len is None or read_len == 0:
+                return False
+            if self._check_dap_transfer_block_response(buffer[1:read_len]) != self.TRANSFER_RESPONSE['OK']:
+                return False
+
+        if self._check_dp_ctrl_stat_error() is False:
+            return False
+
+        if verify_flag:
+            if self._verify_target_data(start_addr, algorithm_size * 4, verify_value) is False:
+                logging.error("download algorithm verify error")
+                return False
+
+        if self._check_dp_ctrl_stat_error() is False:
+            return False
+
+        return True
+
+    def target_flash_init(self, data: ExecuteOperation) -> bool:
+        """
+        ret: 0: success, other: failed
+        """
+        ret = self._execute_operation(data)
+        if ret != 0:
+            logging.error(f"Execute operation(flash init) failed with return code: {ret}")
+            return False
+        return True
+
+    def target_flash_erase(self, data: ExecuteOperation) -> bool:
+        ret = self._execute_operation(data)
+        if ret != 0:
+            logging.error(f"Execute operation(flash erase) failed with return code: {ret}")
+            return False
+        return True
+
+    def target_flash_uninit(self, data: ExecuteOperation) -> bool:
+        ret = self._execute_operation(data)
+        if ret != 0:
+            logging.error(f"Execute operation(flash uninit) failed with return code: {ret}")
+            return False
+        if self._stop_dap_device() is False:
+            return False
+        return True
+
+    def read_target_flash(self, start_addr, size, read_data: list) -> bool:
+        if self._read_target_id() is False:
+            return False
+        if self._read_target_memory(start_addr, size, read_data) is False:
+            return False
+        if self._stop_dap_device() is False:
+            return False
+        return True
+
+    def _verify_target_data(self, start_addr, size, verify_value) -> bool:
+        read_data = []
+        if self._read_target_memory(start_addr, size, read_data) is False:
+            return False
+
+        if self.get_xor_value(read_data, len(read_data)) != verify_value:
+            return False
+
+        return True
+
+    def _read_target_memory(self, start_addr, size, read_data: list) -> bool:
+        read_data.clear()
+        read_size = size
+        size = (size + 4 - 1) // 4
+        use_for_data_size = self.dap_packet_size - 4
+        use_for_data_size = ((use_for_data_size - (use_for_data_size % 4)) & 0xFFFF) // 4
+        if self._set_write_address(start_addr) is False:
+            return False
+        transfer_count = (size + use_for_data_size - 1) // use_for_data_size
+        buffer = usb.util.create_buffer(self.dap_packet_size)
+        for _ in range(transfer_count//self.dap_packet_count):
+            for _ in range(self.dap_packet_count):
+                if self._dap_transfer_block(0x00, use_for_data_size, 0x0F) is False:
+                    return False
+            for _ in range(self.dap_packet_count):
+                read_len = self.usb_device_handle.receive_data_from_dap_device(buffer, timeout=100)
+                if read_len is None or read_len == 0:
+                    return False
+                response = self._check_dap_transfer_block_response(buffer[1:read_len])
+                if response != self.TRANSFER_RESPONSE['OK']:
+                    return False
+                for i in range(4, read_len, 4):
+                    data32 = self._response_list_to_uint32_t(buffer[i:i+4])
+                    read_data.append(data32)
+        rest_count = transfer_count % self.dap_packet_count
+        for _ in range(rest_count - 1):
+            if self._dap_transfer_block(0x00, use_for_data_size, 0x0F) is False:
+                return False
+        if self._dap_transfer_block(0x00, size % use_for_data_size, 0x0F) is False:
+            return False
+        for i in range(rest_count):
+            read_len = self.usb_device_handle.receive_data_from_dap_device(buffer, timeout=100)
+            if read_len is None or read_len == 0:
+                return False
+            response = self._check_dap_transfer_block_response(buffer[1:read_len])
+            if response != self.TRANSFER_RESPONSE['OK']:
+                return False
+            for j in range(4, read_len, 4):
+                data32 = self._response_list_to_uint32_t(buffer[j:j+4])
+                read_data.append(data32)
+
+        if read_size % 4:
+            read_data[-1] &= (0xFFFFFFFF >> ((4 - (read_size % 4)) * 8))
+
+        return True
+
+    @staticmethod
+    def get_xor_value(data, length) -> int:
+        xor_value = 0
+        for i in range(length):
+            xor_value ^= data[i]
+        return xor_value
+
+    def _read_target_id(self) -> bool:
+        if self._steup_swj_sequence(self.dap_swj_clock) is False:
+            return False
+
+        if self.debug_id == 'Unknown':
+            return False
+
+        if self._write_dp_abort(0x1E) is False: # 清除Abort状态
+            return False
+        if self._write_dp_ctrl_stat(0x50000000) is False: # 设置DP控制状态寄存器
+            return False
+        if (self._read_dp_ctrl_stat() >> 24) & 0xF0 != 0xF0:
+            return False
+        if self._write_dp_ctrl_stat(0x50000F00) is False: # 设置DP控制状态寄存器
+            return False
+        if self._write_dp_select(0x00000000) is False:
+            return False
+
+        ap_id = self._read_ap_idr()
+        self.ap_id = "Unknown"
+        self.ap_id = f"0x{ap_id:08X}"
+
+        if self._write_ap_csw(0x23000052) is False:  # 写AP CSW寄存器
+            return False
+
+        self._get_coresight_component_table()
+        scb_reg = SCB_REG(self._coresight_component_table['SCS_BASE'])
+        cpu_id = self._read_reg(scb_reg.CPUID)  # 读取CPUID寄存器
+        self.cpu_id = 'Unknown'
+        self.cpu_id = f"0x{cpu_id:08X}"
+
+        return True
+
+    def _reset_and_halt_target(self) -> bool:
+        if self._read_target_id() is False:
+            return False
+
+        scb_reg = SCB_REG(self._coresight_component_table['SCS_BASE'])
+
+        if self._write_reg(DEBUG_REG.DHCSR, 0xA05F0003) is False:  # 使能停机模式的调试，停机处理器
+            return False
+        if self._write_reg(DEBUG_REG.DEMCR, 0x00000001) is False:  # 发生内核复位时停机调试
+            return False
+        while True:
+            scb_aircr = self._read_reg(scb_reg.AIRCR)  # 读出AIRCR寄存器
+            self._write_reg(scb_reg.AIRCR, ((0x05FA << 16) | \
+                                            (scb_aircr & (0x7 << 8)) | \
+                                            (0x1 << 2)))  # 软件复位
+
+            time.sleep(0.05)  # 等待复位完成
+            debug_dhcsr = self._read_reg(DEBUG_REG.DHCSR)  # 读出DHCSR寄存器，确保复位后停机
+            if (debug_dhcsr & 0x02030000) != 0:
+                debug_dhcsr = self._read_reg(DEBUG_REG.DHCSR)
+                break
+        return True
+
+    def _steup_swj_sequence(self, swj_clock=5000000) -> bool:
         self._get_dap_firmware_version()
         if self.firmware_version == 'Unknown':
-            raise RuntimeError("Failed to retrieve DAP firmware version.")
-        
+            logging.error("Failed to get DAP firmware version.")
+            return False
+
         self._get_dap_capabilities()
         if self.dap_caps == 0x00:
-            raise RuntimeError("Failed to retrieve DAP capabilities.")
-        
+            logging.error("Failed to get DAP capabilities.")
+            return False
+
         self._get_dap_packet_size()
         if self.dap_packet_size == 0:
-            raise RuntimeError("Failed to retrieve DAP packet size.")
-        
+            logging.error("Failed to get DAP packet size.")
+            return False
+
         self._get_dap_packet_count()
         if self.dap_packet_count == 0:
-            raise RuntimeError("Failed to retrieve DAP packet count.")
-        
+            logging.error("Failed to get DAP packet count.")
+            return False
+
         if self._connect_dap_device(0) == 0:
-            raise RuntimeError("Failed to connect to DAP device.")
-        
+            logging.error("Failed to connect to DAP device.")
+            return False
+
         if self._set_dap_swj_clock(swj_clock) is False:  # 设置SWJ时钟频率
-            raise RuntimeError("Failed to set SWJ clock frequency.")
-        
-        if self._config_dap_transfer(0x00, (0xFF & 0xFFFF), (0x00 & 0xFFFF)) is False:  # 配置传输参数
-            raise RuntimeError("Failed to configure DAP transfer parameters.")
-        
+            logging.error("Failed to set SWJ clock frequency.")
+            return False
+
+        if self._config_dap_transfer(0x00, (0xFF & 0xFFFF), (0xFF & 0xFFFF)) is False:  # 配置传输参数
+            logging.error("Failed to configure DAP transfer parameters.")
+            return False
+
         if self._config_dap_swd(0x00) is False:  # 配置SWD协议参数
-            raise RuntimeError("Failed to configure SWD protocol parameters.")
-        
+            logging.error("Failed to configure SWD protocol parameters.")
+            return False
+
         if self._set_dap_host_status('connect_on') is False:
-            raise RuntimeError("Failed to set host status(connect on).")
-        
-        self._read_debug_id()  # 读取调试ID
+            logging.error("Failed to set host status(connect on).")
+            return False
+
+        if self._read_debug_id() is False:  # 读取调试ID
+            logging.error("Failed to read debug ID.")
+            return False
+        return True
+
+    def _stop_dap_device(self) -> bool:
+        if self._set_dap_host_status('connect_off') is False:
+            return False
+
+        if self._disconnect_dap_device() is False:
+            return False
+        return True
 
     def _read_debug_id(self):
-        if self._send_swj_start_sequence(0x10, [0x9E, 0xE7]) is False:
-            raise RuntimeError("Failed to send SWJ start sequence.")
-        
+        if self._send_swd_start_sequence() is False:
+            return False
+
         response = []
         if self._dap_transfer(0x00, 0x01, [[0x02, []]], response) is False:
-            raise RuntimeError("Failed to execute initial DAP transfer.")
-        
-        # 第一个开始序列不行尝试后续序列，keil转包的数据，没有找到具体的意义
+            return False
+
+        # 第一个开始序列不行，使用dormant状态转换
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            if self._send_swj_start_sequence(0x10, [0xB6, 0xED]) is False:
-                raise RuntimeError("Failed to send SWJ start sequence.")
-        
-            response = []
+            if self._send_swj_reset_sequence() is False:
+                return False
+
+            if self._send_swj_swd_to_dormant_sequence() is False:
+                return False
+
+            if self._send_swj_reset_sequence() is False:
+                return False
+
+            if self._send_swj_jtag_to_dormant_sequence() is False:
+                return False
+
+            if self._send_swj_dormant_to_swd_sequence() is False:
+                return False
+
+            if self._send_swj_reset_sequence() is False:
+                return False
+
+            if self._send_swj_idle_sequence() is False:
+                return False
+
+            response.clear()
             if self._dap_transfer(0x00, 0x01, [[0x02, []]], response) is False:
-                raise RuntimeError("Failed to execute initial DAP transfer.")
-            
+                return False
+
             if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-                data = [
-                    0xFF, 0xBA, 0xBB, 0xBB,
-                    0xB3, 0xFF, 0x92, 0xF3,
-                    0x09, 0x62, 0x95, 0x2D,
-                    0x85, 0x86, 0xE9, 0xAF,
-                    0xDD, 0xE3, 0xA2, 0x0E,
-                    0xBC, 0x19, 0xA0, 0x01,
-                ]
-                if self._send_swj_start_sequence(0xBC, data) is False:
-                    raise RuntimeError("Failed to send SWJ start sequence.")
-        
-                response = []
-                if self._dap_transfer(0x00, 0x01, [[0x02, []]], response) is False:
-                    raise RuntimeError("Failed to execute initial DAP transfer.")
-        
+                return False
+
         self.debug_id = 'Unknown'
         debug_id = self._response_list_to_uint32_t(response[2:])
         self.debug_id = f"0x{debug_id:08X}"
+        return True
 
-    def _get_coresight_rom_table(self):
+    def _get_coresight_component_table(self):
         # 清除coresight_rom_table的每一项
-        self._coresight_rom_table = {key: 0x00000000 for key in self._coresight_rom_table}
-        self._coresight_rom_table['BASE_ADDR'] = self._read_debug_interface_base_addr() & 0xFFFFFFFC
-        for index, key in enumerate(self._coresight_rom_table):
+        self._coresight_component_table = ROM_TABLE().get_component_table()
+        for index, key in enumerate(self._coresight_component_table):
             if index == 0:
                 continue
-            temp = self._read_reg(self._coresight_rom_table['BASE_ADDR'] + (index-1) * 4)
+            temp = self._read_reg(self._coresight_component_table['BASE_ADDR'] + (index-1) * 4)
             if temp & 0x01 != 0:
-                self._coresight_rom_table[key] = \
-                    ((temp & 0xFFFFFFFC) + self._coresight_rom_table['BASE_ADDR']) & 0xFFFFFFFC
+                self._coresight_component_table[key] = \
+                    ((temp & 0xFFFFFFFC) + self._coresight_component_table['BASE_ADDR']) & 0xFFFFFFFC
 
-    def _write_dp_abort(self, value):
+            elif temp == 0x00000000: # End marker
+                break
+
+    def _write_dp_abort(self, value) -> bool:
         response = []
         if self._dap_transfer(0x00, 0x01, [[0x00, value]], response) is False:
-            raise RuntimeError("Failed to execute DAP transfer for abort.")
-        
+            logging.error("Failed to write DP ABORT register, value: {value}.")
+            return False
+
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            raise RuntimeError(f"Initial DAP transfer failed with response: 0x{response[1]:02X}")
-        
+            logging.error(f"Failed to write DP ABORT register, response: 0x{response[1]:02X}")
+            return False
+        return True
+
     def _read_dp_abort(self):
         response = []
         if self._dap_transfer(0x00, 0x01, [[0x02, []]], response) is False:
-            raise RuntimeError("Failed to execute DAP transfer for abort.")
-        
+            logging.error("Failed to read DP ABORT register.")
+            return False
+
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            raise RuntimeError(f"Initial DAP transfer failed with response: 0x{response[1]:02X}")
-        
+            logging.error(f"Failed to read DP ABORT register, response: 0x{response[1]:02X}")
+            return False
+
         return self._response_list_to_uint32_t(response[2:])
-        
-    def _write_dp_ctrl_stat(self, value):
-        self._write_dp_select(0x00000000)
+
+    def _write_dp_ctrl_stat(self, value) -> bool:
         response = []
         if self._dap_transfer(0x00, 0x01, [[0x04, value]], response) is False:
-            raise RuntimeError("Failed to execute DAP transfer for control status.")
-        
+            logging.error("Failed to write DP  CTRL STAT register, value: {value}.")
+            return False
+
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            raise RuntimeError(f"Initial DAP transfer failed with response: 0x{response[1]:02X}")
-        
+            logging.error(f"Failed to write DP  CTRL STAT register, response: 0x{response[1]:02X}")
+            return False
+
+        return True
+
     def _read_dp_ctrl_stat(self):
-        self._write_dp_select(0x00000000)
         response = []
         if self._dap_transfer(0x00, 0x01, [[0x06, []]], response) is False:
-            raise RuntimeError("Failed to execute DAP transfer for control status.")
-        
+            logging.error("Failed to read DP  CTRL STAT register.")
+            return False
+
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            raise RuntimeError(f"Initial DAP transfer failed with response: 0x{response[1]:02X}")
-        
+            logging.error(f"Failed to read DP CTRL STAT register, response: 0x{response[1]:02X}")
+            return False
+
         return self._response_list_to_uint32_t(response[2:])
-    
-    def _write_ap_csw(self, value):
-        self._write_dp_select(0x00000000)
+
+    def _check_dp_ctrl_stat_error(self):
+        dp_status = self._read_dp_ctrl_stat()
+        if (dp_status & 0x00000080) != 0 or (dp_status & 0x00000040) == 0:
+            logging.error("DP read/write error")
+            return False
+        return True
+
+    def _write_ap_csw(self, value) -> bool:
         response = []
         if self._dap_transfer(0x00, 0x01, [[0x01, value]], response) is False:
-            raise RuntimeError("Failed to execute DAP transfer for AP CSW.")
-        
+            logging.error("Failed to write AP CSW register, value: {value}.")
+            return False
+
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            raise RuntimeError(f"Initial DAP transfer failed with response: 0x{response[1]:02X}")
-        
+            logging.error(f"Failed to write AP CSW register, response: 0x{response[1]:02X}")
+            return False
+
+        return True
+
     def _read_ap_csw(self):
-        self._write_dp_select(0x00000000)
         response = []
         if self._dap_transfer(0x00, 0x01, [[0x03, []]], response) is False:
-            raise RuntimeError("Failed to execute DAP transfer for AP CSW.")
-        
+            logging.error("Failed to read AP CSW register.")
+            return False
+
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            raise RuntimeError(f"Initial DAP transfer failed with response: 0x{response[1]:02X}")
-        
+            logging.error(f"Failed to read AP CSW register, response: 0x{response[1]:02X}")
+            return False
+
         return self._response_list_to_uint32_t(response[2:])
-    
+
+    def _read_ap_idr(self):
+        self._write_dp_select(0x000000F0)
+        response = []
+        if self._dap_transfer(0x00, 0x01, [[0x0F, []]], response) is False:
+            logging.error("Failed to read AP IDR register.")
+            return False
+
+        if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
+            logging.error(f"Failed to read AP IDR register, response: 0x{response[1]:02X}")
+            return False
+
+        self._write_dp_select(0x00000000)
+
+        return self._response_list_to_uint32_t(response[2:])
+
     def _read_debug_interface_base_addr(self):
         self._write_dp_select(0x000000F0)
         response = []
         if self._dap_transfer(0x00, 0x01, [[0x0B, []]], response) is False:
-            raise RuntimeError("Failed to execute DAP transfer for AP CSW.")
-        
+            logging.error("Failed to read Debug Interface Base Address.")
+            return False
+
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            raise RuntimeError(f"Initial DAP transfer failed with response: 0x{response[1]:02X}")
-        
+            logging.error(f"Failed to read Debug Interface Base Address, response: 0x{response[1]:02X}")
+            return False
+
+        self._write_dp_select(0x00000000)
+
         return self._response_list_to_uint32_t(response[2:])
-        
-    def _write_dp_select(self, value):
+
+    def _write_dp_select(self, value) -> bool:
         response = []
         if self._dap_transfer(0x00, 0x01, [[0x08, value]], response) is False:
-            raise RuntimeError("Failed to execute DAP transfer for select.")
-        
+            logging.error("Failed to write DP select register, value: {value}.")
+            return False
+
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            raise RuntimeError(f"Initial DAP transfer failed with response: 0x{response[1]:02X}")
-        
-    def _write_reg(self, reg_address, value):
+            logging.error(f"Failed to set DP select register, response: 0x{response[1]:02X}")
+            return False
+
+        return True
+
+    def _set_write_address(self, addr) -> bool:
+        response = []
+        if self._dap_transfer(0x00, 0x01, [[0x05, addr]], response) is False:
+            logging.error("Failed to set write address, address: {addr}.")
+            return False
+
+        if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
+            logging.error(f"Failed to set write address, response: 0x{response[1]:02X}")
+            return False
+        return True
+
+    def _write_reg(self, reg_address, value) -> bool:
         """
         写寄存器
         :param reg_address: 寄存器地址
         :param value: 要写入的值
         :return: None
         """
-        self._write_dp_select(0x00000000)
         response = []
         if self._dap_transfer(0x00, 0x02, [[0x05, reg_address], [0x0d, value]], response) is False:
-            raise RuntimeError("Failed to write register.")
-        
+            logging.error("Failed to write register, address: {reg_address}, value: {value}.")
+            return False
+
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            raise RuntimeError(f"Write register failed with response: 0x{response[1]:02X}")
-        
+            logging.error(f"Failed to write register, response: 0x{response[1]:02X}")
+            return False
+
+        return True
+
     def _read_reg(self, reg_address):
         """
         读寄存器
         :param reg_address: 寄存器地址
         :return: 寄存器值
         """
-        self._write_dp_select(0x00000000)
         response = []
-        if self._dap_transfer(0x00, 0x02, [[0x05, reg_address],[0x0F, []]], response) is False:
-            raise RuntimeError("Failed to read register.")
-        
+        if self._dap_transfer(0x00, 0x02, [[0x05, reg_address], [0x0F, []]], response) is False:
+            logging.error("Failed to read register, address: {reg_address}.")
+            return False
+
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            raise RuntimeError(f"Read register failed with response: 0x{response[1]:02X}")
-        
+            logging.error(f"Failed to read register, response: 0x{response[1]:02X}")
+            return False
+
         return self._response_list_to_uint32_t(response[2:])
-        
+
     def _response_list_to_uint32_t(self, response):
         """
         将DAP响应列表转换为32位无符号整数
@@ -346,6 +613,144 @@ class DAPHandler:
         for i, byte in enumerate(response):
             value |= (byte << (i * 8))
         return value & 0xFFFFFFFF
+
+    def _execute_operation(self, operation: ExecuteOperation):
+        """
+        0x05: 写DCRSR寄存器
+        0x06: 读DP-CTRL/STAT寄存器
+        0x09: 写DCRDR寄存器
+        0x13: 以掩码读DHCSR寄存器
+        0x0B: 读DCRDR寄存器
+        """
+        self._execute_operation_init()
+        response = []
+        # 先写R0-R3寄存器
+        data = [
+            [0x09, operation.r0],
+            [0x05, 0x00010000],
+            [0x13, 0x00010000],
+            [0x09, operation.r1],
+            [0x05, 0x00010001],
+            [0x13, 0x00010000],
+            [0x09, operation.r2],
+            [0x05, 0x00010002],
+            [0x13, 0x00010000],
+            [0x09, operation.r3],
+            [0x05, 0x00010003],
+            [0x13, 0x00010000],
+        ]
+        if self._dap_transfer(0x00, 0x0C, data, response) is False:
+            logging.error("Failed to write excute operation.")
+            return False
+
+        if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
+            logging.error(f"Failed to write excute operation, response: 0x{response[1]:02X}")
+            return False
+        # 然后写R9, R13, R14, R15寄存器
+        response.clear()
+        data = [
+            [0x09, operation.r9],
+            [0x05, 0x00010009],
+            [0x13, 0x00010000],
+            [0x09, operation.r13],
+            [0x05, 0x0001000D],
+            [0x13, 0x00010000],
+            [0x09, operation.r14],
+            [0x05, 0x0001000E],
+            [0x13, 0x00010000],
+            [0x09, operation.r15],
+            [0x05, 0x0001000F],
+            [0x13, 0x00010000],
+        ]
+        if self._dap_transfer(0x00, 0x0C, data, response) is False:
+            logging.error("Failed to write excute operation.")
+            return False
+
+        if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
+            logging.error(f"Failed to write excute operation, response: 0x{response[1]:02X}")
+            return False
+        # 最后写xpsr, DHCSR寄存器，并读取DP端口的DP-CTRL/STAT寄存器
+        response.clear()
+        data = [
+            [0x09, operation.xpsr],
+            [0x05, 0x00010010],
+            [0x13, 0x00010000],
+            [0x01, 0xA05F0001],
+            [0x06, []],
+        ]
+        if self._dap_transfer(0x00, 0x05, data, response) is False:
+            logging.error("Failed to write excute operation.")
+            return False
+
+        if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
+            logging.error(f"Failed to write excute operation, response: 0x{response[1]:02X}")
+            return False
+        dp_status = self._response_list_to_uint32_t(response[2:])
+        if (dp_status & 0x00000080) != 0 or (dp_status & 0x00000040) == 0:
+            logging.error(f"DP status read/write error(code: 0x{dp_status:08X})")
+            return False
+        self._write_dp_select(0x00000000)
+        timeout = operation.timeout
+        while True:
+            timeout -=10 # 10ms
+            if timeout <= 0:
+                logging.error("Execute operation timeout.")
+                return False
+            dhcsr_value = self._read_reg(DEBUG_REG.DHCSR)
+            if (dhcsr_value & 0x00030000) == 0x00030000:
+                break
+            time.sleep(0.01)
+        # 读取返回值
+        self._execute_operation_init()
+        response.clear()
+        data = [
+            [0x05, 0x00000000],
+            [0x13, 0x00010000],
+            [0x0B, []],
+            [0x06, []],
+        ]
+        if self._dap_transfer(0x00, 0x04, data, response) is False:
+            logging.error("Failed to write excute operation.")
+            return False
+
+        if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
+            logging.error(f"Failed to write excute operation, response: 0x{response[1]:02X}")
+            return False
+
+        dp_status = self._response_list_to_uint32_t(response[6:])
+        if (dp_status & 0x00000080) != 0 or (dp_status & 0x00000040) == 0:
+            logging.error(f"DP status read/write error(code: 0x{dp_status:08X})")
+            return False
+        self._write_dp_select(0x00000000)
+        timeout = operation.timeout
+        while True:
+            timeout -=1 # 1ms
+            if timeout <= 0:
+                logging.error("Execute operation timeout.")
+                return False
+            dhcsr_value = self._read_reg(DEBUG_REG.DHCSR)
+            if (dhcsr_value & 0x00030000) == 0x00030000:
+                break
+            time.sleep(0.001)
+
+        ret = self._response_list_to_uint32_t(response[2:6])
+        return ret
+
+    def _execute_operation_init(self):
+        response = []
+        data = [
+            [0x20, 0x00010000],
+            [0x08, 0x00000000],
+            [0x05, DEBUG_REG.DHCSR],
+            [0x08, 0x00000010],
+        ]
+        if self._dap_transfer(0x00, 0x04, data, response) is False:
+            logging.error("Failed to read register, address: {reg_address}.")
+            return False
+
+        if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
+            logging.error(f"Failed to read register, response: 0x{response[1]:02X}")
+            return False
 
     """
     Response Status
@@ -366,7 +771,7 @@ class DAPHandler:
         'ERROR': 0x04,  # 错误
         'Mismatch': 0x05,  # 值不匹配
     }
-    
+
     """
     General Commands
     Information and Control commands for the CMSIS-DAP Debug Unit
@@ -387,7 +792,7 @@ class DAPHandler:
         'packet_count': [0x00, 0xFE],           # 最大包数量 (字节)
         'packet_size': [0x00, 0xFF]             # 最大包大小 (短整型)
     }
-    
+
     # DAP_HostStatus命令定义
     # 响应格式: [0x01, Status]
     # Status: 0x00=成功, 0xFF=失败
@@ -397,7 +802,7 @@ class DAPHandler:
         'running_off': [0x01, 0x01, 0x00],      # 运行LED关闭
         'running_on': [0x01, 0x01, 0x01]        # 运行LED开启
     }
-    
+
     # DAP_Connect命令定义
     # 响应格式: [0x02, Port]
     # Port: 0=初始化失败, 1=SWD模式已初始化, 2=JTAG模式已初始化
@@ -406,7 +811,7 @@ class DAPHandler:
         'swd': [0x02, 0x01],                    # SWD模式连接
         'jtag': [0x02, 0x02]                    # JTAG模式连接
     }
-    
+
     # DAP_Disconnect命令定义
     # 响应格式: [0x03, Status]
     # Status: 0x00=成功断开连接, 0xFF=断开连接失败
@@ -431,9 +836,9 @@ class DAPHandler:
             (abort_value >> 16) & 0xFF,
             (abort_value >> 24) & 0xFF    # 高字节
         ]
-        
+
         return [0x08, dap_index] + abort_bytes
-    
+
     # DAP_Delay命令构建方法（需要动态参数）
     # 响应格式: [0x09, Status]
     # Status: 0x00=延迟执行成功, 0xFF=延迟执行失败
@@ -446,9 +851,9 @@ class DAPHandler:
         # 将延迟时间转换为小端序2字节（SHORT）
         delay_low = delay_us & 0xFF
         delay_high = (delay_us >> 8) & 0xFF
-        
+
         return [0x09, delay_low, delay_high]
-    
+
     # DAP_ResetTarget命令定义
     # 响应格式: [0x0A, Status, Execute]
     # Status: 0x00=复位成功, 0xFF=复位失败
@@ -464,10 +869,10 @@ class DAPHandler:
     # DAP_SWJ_Pins命令构建方法（需要动态参数）
     # 响应格式: [0x10, Pin Input]
     # Pin Input: 从目标设备读取的引脚状态
-    # 
+    #
     # I/O引脚映射:
     # Bit 0: SWCLK/TCK
-    # Bit 1: SWDIO/TMS  
+    # Bit 1: SWDIO/TMS
     # Bit 2: TDI
     # Bit 3: TDO
     # Bit 5: nTRST
@@ -489,9 +894,9 @@ class DAPHandler:
             (pin_wait >> 16) & 0xFF,
             (pin_wait >> 24) & 0xFF
         ]
-        
+
         return [0x10, pin_output, pin_select] + wait_bytes
-    
+
     # DAP_SWJ_Clock命令构建方法（需要动态参数）
     # 响应格式: [0x11, Status]
     # Status: 0x00=时钟设置成功, 0xFF=时钟设置失败
@@ -508,9 +913,9 @@ class DAPHandler:
             (clock_hz >> 16) & 0xFF,
             (clock_hz >> 24) & 0xFF
         ]
-        
+
         return [0x11] + clock_bytes
-    
+
     # DAP_SWJ_Sequence命令构建方法（需要动态参数）
     # 响应格式: [0x12, Status]
     # Status: 0x00=序列发送成功, 0xFF=序列发送失败
@@ -524,10 +929,10 @@ class DAPHandler:
         # 256位编码为0
         if bit_count == 256:
             bit_count = 0
-        
+
         # 构建命令
         command = [0x12, bit_count]
-        
+
         # 添加序列数据
         if isinstance(sequence_data, list):
             command.extend(sequence_data)
@@ -536,9 +941,9 @@ class DAPHandler:
             byte_count = (bit_count + 7) // 8 if bit_count > 0 else 32  # 256位需要32字节
             for i in range(byte_count):
                 command.append((sequence_data >> (i * 8)) & 0xFF)
-        
+
         return command
-    
+
     """
     SWD Commands
     Configure the parameters for SWD mode
@@ -555,7 +960,7 @@ class DAPHandler:
         :return: 命令列表
         """
         return [0x13, configuration]
-    
+
     # DAP_SWD_Sequence命令构建方法（需要动态参数）
     # 响应格式: [0x1D, Status, SWDIO Data...]
     # Status: 0x00=序列执行成功, 0xFF=序列执行失败
@@ -573,19 +978,19 @@ class DAPHandler:
         :return: 命令列表
         """
         command = [0x1D, sequence_count]
-        
+
         for i, sequence_info in enumerate(sequence_request):
             command.append(sequence_info)
-            
+
             # 如果是输出模式（bit 7 = 0），添加SWDIO数据
             if (sequence_info & 0x80) == 0:
                 tck_cycles = sequence_info & 0x3F
                 if tck_cycles == 0:
                     tck_cycles = 64
-                
+
                 # 计算需要的字节数（每8个TCK周期需要1字节）
                 byte_count = (tck_cycles + 7) // 8
-                
+
                 # 添加SWDIO数据
                 if sequence_data is not None and i < len(sequence_data):
                     swdio_data = sequence_data[i]
@@ -595,7 +1000,7 @@ class DAPHandler:
                             command.append((swdio_data >> (j * 8)) & 0xFF)
                     elif isinstance(swdio_data, list):
                         command.extend(swdio_data[:byte_count])
-        
+
         return command
 
     """
@@ -615,7 +1020,7 @@ class DAPHandler:
         :return: 命令列表
         """
         return [0x17, transport]
-    
+
     # DAP_SWO_Mode命令定义
     # 响应格式: [0x18, Status]
     # Status: 0x00=SWO模式设置成功, 0xFF=设置失败
@@ -629,7 +1034,7 @@ class DAPHandler:
         :return: 命令列表
         """
         return [0x18, mode]
-    
+
     # DAP_SWO_Baudrate命令定义
     # 响应格式: [0x19, Baudrate]
     # Baudrate: 实际波特率或0（波特率未配置）
@@ -646,9 +1051,9 @@ class DAPHandler:
             (baudrate >> 16) & 0xFF,
             (baudrate >> 24) & 0xFF
         ]
-        
+
         return [0x19] + baudrate_bytes
-    
+
     # DAP_SWO_Control命令定义
     # 响应格式: [0x1A, Status]
     # Status: 0x00=SWO控制设置成功, 0xFF=设置失败
@@ -661,10 +1066,10 @@ class DAPHandler:
         :return: 命令列表
         """
         return [0x1A, control]
-    
+
     # DAP_SWO_Status命令定义
     # 响应格式: [0x1B, Trace Status, Trace Count]
-    # Trace Status: 
+    # Trace Status:
     #   Bit 0: Trace Capture (1=active, 0=inactive)
     #   Bit 6: Trace Stream Error
     #   Bit 7: Trace Buffer Overrun
@@ -673,7 +1078,7 @@ class DAPHandler:
 
     # DAP_SWO_ExtendedStatus命令定义
     # 响应格式: [0x1E, Trace Status, Trace Count, Index, TD_TimeStamp]
-    # Trace Status: 
+    # Trace Status:
     #   Bit 0: Trace Capture (1=active, 0=inactive)
     #   Bit 6: Trace Stream Error
     #   Bit 7: Trace Buffer Overrun
@@ -690,10 +1095,10 @@ class DAPHandler:
         :return: 命令列表
         """
         return [0x1E, control]
-    
+
     # DAP_SWO_Data命令定义
     # 响应格式: [0x1C, Trace Status, Trace Count, Trace Data...]
-    # Trace Status: 
+    # Trace Status:
     #   Bit 0: Trace Capture (1=active, 0=inactive)
     #   Bit 6: Trace Stream Error
     #   Bit 7: Trace Buffer Overrun
@@ -710,9 +1115,9 @@ class DAPHandler:
             trace_count & 0xFF,
             (trace_count >> 8) & 0xFF
         ]
-        
+
         return [0x1C] + count_bytes
-    
+
     """
     JTAG Commands
     Detect and configure the JTAG device chain
@@ -734,18 +1139,18 @@ class DAPHandler:
         :return: 命令列表
         """
         command = [0x14, sequence_count]
-        
+
         for i, sequence_info in enumerate(sequence_request):
             command.append(sequence_info)
-            
+
             # 获取TCK周期数
             tck_cycles = sequence_info & 0x3F
             if tck_cycles == 0:
                 tck_cycles = 64
-            
+
             # 计算需要的字节数（每8个TCK周期需要1字节）
             byte_count = (tck_cycles + 7) // 8
-            
+
             # 添加TDI数据
             if sequence_data is not None and i < len(sequence_data):
                 tdi_data = sequence_data[i]
@@ -755,7 +1160,7 @@ class DAPHandler:
                         command.append((tdi_data >> (j * 8)) & 0xFF)
                 elif isinstance(tdi_data, list):
                     command.extend(tdi_data[:byte_count])
-        
+
         return command
 
     # DAP_JTAG_Configure命令构建方法（需要动态参数）
@@ -769,13 +1174,13 @@ class DAPHandler:
         :return: 命令列表
         """
         command = [0x15, device_count]
-        
+
         # 添加每个设备的IR长度
         for ir_length in ir_lengths:
             command.append(ir_length)
-        
+
         return command
-    
+
     # DAP_JTAG_IDCODE命令构建方法（需要动态参数）
     # 响应格式: [0x16, Status, ID Code]
     # Status: 0x00=IDCODE读取成功, 0xFF=读取失败
@@ -787,7 +1192,7 @@ class DAPHandler:
         :return: 命令列表
         """
         return [0x16, jtag_index]
-    
+
     """
     Transfer Commands
     Read and Writes to CoreSight registers
@@ -805,19 +1210,19 @@ class DAPHandler:
         """
         # 将参数转换为小端序字节
         idle_cycles_bytes = [idle_cycles & 0xFF]
-        
+
         wait_retry_bytes = [
             wait_retry & 0xFF,
             (wait_retry >> 8) & 0xFF
         ]
-        
+
         match_retry_bytes = [
             match_retry & 0xFF,
             (match_retry >> 8) & 0xFF
         ]
-        
+
         return [0x04] + idle_cycles_bytes + wait_retry_bytes + match_retry_bytes
-    
+
     # DAP_Transfer命令构建方法（需要动态参数）
     # 响应格式: [0x05, Transfer Count, Transfer Response, TD_TimeStamp, Transfer Data...]
     # Transfer Count: 执行的传输数量 (1..255)
@@ -845,15 +1250,15 @@ class DAPHandler:
         :return: 命令列表
         """
         command = [0x05, dap_index, transfer_count]
-        
+
         for request_byte, transfer_data in transfer_sequence:
             command.append(request_byte)
-            
+
             # 检查是否需要传输数据
             rnw = (request_byte >> 1) & 1  # 读写位
             value_match = (request_byte >> 4) & 1  # 值匹配位
             match_mask = (request_byte >> 5) & 1  # 匹配掩码位
-            
+
             # 对于写操作、值匹配读操作、匹配掩码写操作，需要包含数据
             if (rnw == 0) or (rnw == 1 and value_match == 1) or (rnw == 0 and match_mask == 1):
                 if transfer_data is not None:
@@ -868,9 +1273,9 @@ class DAPHandler:
                         command.extend(data_bytes)
                     elif isinstance(transfer_data, list):
                         command.extend(transfer_data)
-        
+
         return command
-    
+
     # DAP_TransferBlock命令构建方法（需要动态参数）
     # 响应格式: [0x06, Transfer Count, Transfer Response, Transfer Data...]
     # Transfer Count: 执行的传输数量 (1..65535)
@@ -902,12 +1307,12 @@ class DAPHandler:
             transfer_count & 0xFF,
             (transfer_count >> 8) & 0xFF
         ]
-        
+
         command = [0x06, dap_index] + count_bytes + [transfer_request]
-        
+
         # 检查是否为写操作
         rnw = (transfer_request >> 1) & 1  # 读写位
-        
+
         # 对于写操作，需要包含传输数据
         if rnw == 0 and transfer_data is not None:
             for data in transfer_data:
@@ -922,7 +1327,7 @@ class DAPHandler:
                     command.extend(data_bytes)
                 elif isinstance(data, list):
                     command.extend(data)
-        
+
         return command
 
     # DAP_TransferAbort命令定义
@@ -949,19 +1354,19 @@ class DAPHandler:
         """
         # 计算命令数量
         num_cmd = len(commands)
-        
+
         # 构建命令
         command = [0x7F, num_cmd]
-        
+
         # 连接所有命令请求
         for cmd in commands:
             if isinstance(cmd, list):
                 command.extend(cmd)
             elif isinstance(cmd, int):
                 command.append(cmd)
-        
+
         return command
-    
+
     # DAP_QueueCommands命令构建方法（需要动态参数）
     # 响应格式: [0x7E, NumCmd, Command Responses...]
     # NumCmd: 执行的命令数量
@@ -978,19 +1383,19 @@ class DAPHandler:
         """
         # 计算命令数量
         num_cmd = len(commands)
-        
+
         # 构建命令
         command = [0x7E, num_cmd]
-        
+
         # 连接所有命令请求
         for cmd in commands:
             if isinstance(cmd, list):
                 command.extend(cmd)
             elif isinstance(cmd, int):
                 command.append(cmd)
-        
+
         return command
-    
+
     def _get_dap_firmware_version(self):
         write_len = self.usb_device_handle.send_data_to_dap_device(self.INFO_COMMANDS['version'], timeout=100)
         if write_len != len(self.INFO_COMMANDS['version']):
@@ -1005,7 +1410,7 @@ class DAPHandler:
             firmware_version = ''.join(chr(c) for c in buffer[2:read_len-1])
             self.firmware_version = firmware_version
         return firmware_version
-    
+
     def _get_dap_capabilities(self):
         write_len = self.usb_device_handle.send_data_to_dap_device(self.INFO_COMMANDS['caps'], timeout=100)
         if write_len != len(self.INFO_COMMANDS['caps']):
@@ -1021,25 +1426,25 @@ class DAPHandler:
             # self._check_dap_capabilities(capabilities)
             self.dap_caps = capabilities
         return capabilities
-    
+
     def _check_dap_capabilities(self, capability):
         if capability:
-            print(f"DAP Capabilities: 0x{capability:02X}")
+            logging.info(f"DAP Capabilities: 0x{capability:02X}")
         if capability & 0x01:
-            print("✓ SWD 支持")
+            logging.info("✓ SWD 支持")
         if capability & 0x02:
-            print("✓ JTAG 支持") 
+            logging.info("✓ JTAG 支持")
         if capability & 0x04:
-            print("✓ SWO UART 支持")
+            logging.info("✓ SWO UART 支持")
         if capability & 0x08:
-            print("✓ SWO Manchester 支持")
+            logging.info("✓ SWO Manchester 支持")
         if capability & 0x10:
-            print("✓ 原子命令支持")
+            logging.info("✓ 原子命令支持")
         if capability & 0x20:
-            print("✓ 测试域定时器支持")
+            logging.info("✓ 测试域定时器支持")
         if capability & 0x40:
-            print("✓ SWO 流式跟踪支持")
-    
+            logging.info("✓ SWO 流式跟踪支持")
+
     def _get_dap_packet_size(self) -> int:
         write_len = self.usb_device_handle.send_data_to_dap_device(self.INFO_COMMANDS['packet_size'], timeout=100)
         if write_len != len(self.INFO_COMMANDS['packet_size']):
@@ -1065,7 +1470,7 @@ class DAPHandler:
         for i in range(buffer[1]):
             self.dap_packet_count |= buffer[i+2] << (i*8)
         return self.dap_packet_count
-        
+
     def _connect_dap_device(self, port=0) -> int:
         """
         连接到DAP设备
@@ -1073,19 +1478,20 @@ class DAPHandler:
         """
         command = self.CONNECT_COMMANDS.get('swd' if port == 1 else 'jtag' if port == 2 else 'default', None)
         if command is None:
-            raise ValueError(f"Invalid port: {port}. Valid ports are: 0 (default), 1 (SWD), 2 (JTAG).")
+            logging.error(f"Invalid port: {port}. Valid ports are: 0 (default), 1 (SWD), 2 (JTAG).")
+            return False
 
         write_len = self.usb_device_handle.send_data_to_dap_device(command, timeout=100)
         if write_len != len(command):
             return False
-        
+
         buffer = usb.util.create_buffer(self.dap_packet_size)
         read_len = self.usb_device_handle.receive_data_from_dap_device(buffer, timeout=100)
         if read_len is None or read_len == 0:
             return False
-        
+
         return buffer[1] & 0xFF
-    
+
     def _disconnect_dap_device(self) -> bool:
         """
         断开DAP设备连接
@@ -1094,14 +1500,14 @@ class DAPHandler:
         write_len = self.usb_device_handle.send_data_to_dap_device(command, timeout=100)
         if write_len != len(command):
             return False
-        
+
         buffer = usb.util.create_buffer(self.dap_packet_size)
         read_len = self.usb_device_handle.receive_data_from_dap_device(buffer, timeout=100)
         if read_len is None or read_len == 0:
             return False
-        
+
         return buffer[1] == self.DAP_STATUS['OK']
-    
+
     def _set_dap_swj_clock(self, clock_hz=0) -> bool:
         """
         设置DAP设备的时钟频率
@@ -1114,14 +1520,14 @@ class DAPHandler:
         write_len = self.usb_device_handle.send_data_to_dap_device(command, timeout=100)
         if write_len != len(command):
             return False
-        
+
         buffer = usb.util.create_buffer(self.dap_packet_size)
         read_len = self.usb_device_handle.receive_data_from_dap_device(buffer, timeout=100)
         if read_len is None or read_len == 0:
             return False
-        
+
         return buffer[1] == self.DAP_STATUS['OK']
-    
+
     def _config_dap_transfer(self, idle_cycles=0, wait_retry=0xFF, match_retry=0) -> bool:
         """
         配置DAP传输参数
@@ -1133,14 +1539,14 @@ class DAPHandler:
         write_len = self.usb_device_handle.send_data_to_dap_device(command, timeout=100)
         if write_len != len(command):
             return False
-        
+
         buffer = usb.util.create_buffer(self.dap_packet_size)
         read_len = self.usb_device_handle.receive_data_from_dap_device(buffer, timeout=100)
         if read_len is None or read_len == 0:
             return False
-        
+
         return buffer[1] == self.DAP_STATUS['OK']
-    
+
     def _config_dap_swd(self, configuration=0x00) -> bool:
         """
         配置DAP SWD协议参数
@@ -1152,29 +1558,30 @@ class DAPHandler:
         write_len = self.usb_device_handle.send_data_to_dap_device(command, timeout=100)
         if write_len != len(command):
             return False
-        
+
         buffer = usb.util.create_buffer(self.dap_packet_size)
         read_len = self.usb_device_handle.receive_data_from_dap_device(buffer, timeout=100)
         if read_len is None or read_len == 0:
             return False
-        
+
         return buffer[1] == self.DAP_STATUS['OK']
-    
+
     def _set_dap_host_status(self, status) -> bool:
         command = self.HOST_STATUS_COMMANDS.get(status, None)
         if command is None:
-            raise ValueError(f"Invalid host status: {status}. Valid statuses are: {list(self.HOST_STATUS_COMMANDS.keys())}")
+            logging.error(f"Invalid host status: {status}. Valid statuses are: {list(self.HOST_STATUS_COMMANDS.keys())}.")
+            return False
         write_len = self.usb_device_handle.send_data_to_dap_device(command, timeout=100)
         if write_len != len(command):
             return False
-        
+
         buffer = usb.util.create_buffer(self.dap_packet_size)
         read_len = self.usb_device_handle.receive_data_from_dap_device(buffer, timeout=100)
         if read_len is None or read_len == 0:
             return False
-        
+
         return buffer[1] == self.DAP_STATUS['OK']
-    
+
     def _set_dap_swj_pin(self, pin_output=0, pin_select=0, pin_wait=0) -> int:
         """
         设置DAP SWJ引脚输出
@@ -1186,14 +1593,14 @@ class DAPHandler:
         write_len = self.usb_device_handle.send_data_to_dap_device(command, timeout=100)
         if write_len != len(command):
             return False
-        
+
         buffer = usb.util.create_buffer(self.dap_packet_size)
         read_len = self.usb_device_handle.receive_data_from_dap_device(buffer, timeout=100)
         if read_len is None or read_len == 0:
             return False
-        
+
         return buffer[1] & 0xFF
-    
+
     def _send_swj_sequence(self, bit_count, sequence_data) -> bool:
         """
         发送SWJ序列
@@ -1204,27 +1611,27 @@ class DAPHandler:
         write_len = self.usb_device_handle.send_data_to_dap_device(command, timeout=100)
         if write_len != len(command):
             return False
-        
+
         buffer = usb.util.create_buffer(self.dap_packet_size)
         read_len = self.usb_device_handle.receive_data_from_dap_device(buffer, timeout=100)
         if read_len is None or read_len == 0:
             return False
-        
+
         return buffer[1] == self.DAP_STATUS['OK']
-    
-    def _send_swj_start_sequence(self, bit_count, data: list) -> bool:
+
+    def _send_swd_start_sequence(self) -> bool:
         if self._send_swj_reset_sequence() is False:
             return False
-        if self._send_swj_switch_swd_sequence(bit_count, data) is False:
+        if self._send_swj_switch_swd_sequence() is False:
             return False
-        
         if self._send_swj_reset_sequence() is False:
             return False
+
         if self._send_swj_idle_sequence() is False:
             return False
-        
+
         return True
-    
+
     def _send_swj_reset_sequence(self) -> bool:
         """
         发送SWJ复位序列
@@ -1232,17 +1639,66 @@ class DAPHandler:
         SW-DP 状态机处于复位状态。
         """
         return self._send_swj_sequence(0x33, [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])
-    
-    def _send_swj_switch_swd_sequence(self, bit_count, data: list) -> bool:
-        return self._send_swj_sequence(bit_count, data)
-    
+
+    def _send_swj_switch_swd_sequence(self) -> bool:
+        """
+        发送复位序列 + 0xE79E + 发送复位序列
+        """
+        return self._send_swj_sequence(0x10, [0x9E, 0xE7])
+
     def _send_swj_idle_sequence(self) -> bool:
         """
         发送SWJ空闲序列
         在复位状态后线路处于低电平至少两个周期， SW-DP 状态机处于空闲状态。
         """
         return self._send_swj_sequence(0x08, [0x00])
-    
+
+    def _send_swj_jtag_to_dormant_sequence(self) -> bool:
+        """
+        发送SWJ JTAG到休眠序列
+        至少5个周期高电平 + 0x33BBBBBA
+        """
+        return self._send_swj_sequence(0x28, [0xFF, 0xBA, 0xBB, 0xBB, 0x33])
+
+    def _send_swj_swd_to_dormant_sequence(self) -> bool:
+        """
+        发送SWJ SWD到休眠序列
+        发送复位序列 + 0xE3BC
+        """
+        return self._send_swj_sequence(0x10, [0xBC, 0xE3])
+
+    def _send_swj_dormant_to_swd_sequence(self) -> bool:
+        """
+        至少8个周期高电平 + 128-bit Selection Alert sequence + 4个周期低电平 + activation code sequence
+        128-bit Selection Alert sequence = 0x19BC0EA2 E3DDAFE9 86852D95 6209F392
+        activation code sequence: swd = 0xA1, jtag = 0xA0
+        """
+        data = [
+            0xFF,
+            0x92, 0xF3, 0x09, 0x62,
+            0x95, 0x2D, 0x85, 0x86,
+            0xE9, 0xAF, 0xDD, 0xE3,
+            0xA2, 0x0E, 0xBC, 0x19,
+            0xA0, 0x01,
+        ]
+        return self._send_swj_sequence(0x98, data)
+
+    def _send_swj_dormant_to_jtag_sequence(self) -> bool:
+        """
+        至少8个周期高电平 + 128-bit Selection Alert sequence + 4个周期低电平 + activation code sequence
+        128-bit Selection Alert sequence = 0x19BC0EA2 E3DDAFE9 86852D95 6209F392
+        activation code sequence: swd = 0xA1, jtag = 0xA0
+        """
+        data = [
+            0xFF,
+            0x92, 0xF3, 0x09, 0x62,
+            0x95, 0x2D, 0x85, 0x86,
+            0xE9, 0xAF, 0xDD, 0xE3,
+            0xA2, 0x0E, 0xBC, 0x19,
+            0xA0, 0x00
+        ]
+        return self._send_swj_sequence(0x98, data)
+
     def _dap_transfer(self, dap_index, transfer_count, transfer_sequence, response=[]) -> bool:
         """
         执行DAP传输
@@ -1255,21 +1711,36 @@ class DAPHandler:
         write_len = self.usb_device_handle.send_data_to_dap_device(command, timeout=100)
         if write_len != len(command):
             return False
-        
+
         buffer = usb.util.create_buffer(self.dap_packet_size)
         read_len = self.usb_device_handle.receive_data_from_dap_device(buffer, timeout=100)
         if read_len is None or read_len == 0:
             return False
-        
+
         # 清空并填充响应数据
         response.clear()
         response.extend(buffer[1:read_len])
-        
+
         return True
-    
+
+    def _dap_transfer_block(self, dap_index, transfer_count, transfer_request, transfer_data=None) -> bool:
+        """
+        执行DAP块传输
+        :param dap_index: JTAG设备的索引（SWD模式忽略）
+        :param transfer_count: 传输数量 (1..65535)
+        :param transfer_request: 传输请求字节
+        :param transfer_data: 传输数据列表（仅对写操作需要）
+        """
+        command = self._transfer_block_command(dap_index, transfer_count, transfer_request, transfer_data)
+        write_len = self.usb_device_handle.send_data_to_dap_device(command, timeout=100)
+        if write_len != len(command):
+            return False
+
+        return True
+
     def _check_dap_transfer_response(self, response):
         temp = response[1] & 0x07
-        
+
         match temp:
             case 1:
                 return self.TRANSFER_RESPONSE['OK']
@@ -1279,9 +1750,26 @@ class DAPHandler:
                 return self.TRANSFER_RESPONSE['FAULT']
             case 7:
                 return self.TRANSFER_RESPONSE['NO_ACK']
-        
+
         # 检查其他位
         if response[1] & 0x08:
             return self.TRANSFER_RESPONSE['ERROR']
         if response[1] & 0x10:
             return self.TRANSFER_RESPONSE['Mismatch']
+
+    def _check_dap_transfer_block_response(self, response):
+        temp = response[2] & 0x07
+
+        match temp:
+            case 1:
+                return self.TRANSFER_RESPONSE['OK']
+            case 2:
+                return self.TRANSFER_RESPONSE['WAIT']
+            case 4:
+                return self.TRANSFER_RESPONSE['FAULT']
+            case 7:
+                return self.TRANSFER_RESPONSE['NO_ACK']
+
+        # 检查其他位
+        if response[2] & 0x08:
+            return self.TRANSFER_RESPONSE['ERROR']

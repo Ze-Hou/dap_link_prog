@@ -1,0 +1,651 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package schemaVersion="1.2" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="PACK.xsd">
+  <vendor>ArteryTek</vendor>
+  <url></url>
+  <name>AT32A403A_DFP</name>
+  <description>ArteryTek AT32A403A Series Device Support,Drivers</description>
+  <releases>
+    <release version="2.0.8" date="2025-04-25">
+      Update for firmware library and svd file.
+    </release>
+    <release version="2.0.7" date="2024-12-16">
+      Update for firmware library and svd file.
+    </release>
+    <release version="2.0.6" date="2024-08-09">
+      Update for firmware library.
+    </release>
+    <release version="2.0.5" date="2024-04-03">
+      Update for SFR file.
+    </release>
+    <release version="2.0.4" date="2024-01-26">
+      Update for firmware library.
+    </release>
+    <release version="2.0.3" date="2024-01-05">
+      Update for firmware library.
+    </release>
+    <release version="2.0.2" date="2023-11-28">
+      Update for firmware library and svd file.
+    </release>
+    <release version="2.0.1" date="2023-10-27">
+      Update for firmware library.
+    </release>
+    <release version="2.0.0" date="2023-06-08">
+      First Release version of AT32A403A Device Family Pack based BSP v2.x.x.
+    </release>
+  </releases>
+  <keywords>
+    <!-- keywords for indexing -->
+    <keyword>ArteryTek</keyword>
+    <keyword>AT32A403A</keyword>
+    <keyword>AT32A4</keyword>
+  </keywords>
+
+  <devices>
+    <!-- ******************************  Cortex-M4  ********************** -->
+    <family Dfamily="AT32A40x Series" Dvendor="ArteryTek:143">
+      <!--book name="Device/ARM/Documents/??_dgug.pdf"       title="?? Device Generic Users Guide"/-->
+    <processor Dcore="Cortex-M4" DcoreVersion="r0p1" Dfpu="1" Dmpu="1" Dtz="NO_TZ" Dendian="Little-endian" />
+    <compile header="Device/Include/at32a403a.h"/>
+
+      <description>
+AT32A4 is a new 32-bit high performance, low power consumption universal microcontroller family powered by the ARM Cortex-M4 RISC core,which targeted at various MCU application areas.
+AT32A4 family integrates features to simplify system design and provide customers wide range of comprehensive and superior cost effective MCU portfolios with proven technology and great innovation.
+      </description>
+
+      <!-- ************************  Subfamily 'AT32A403A'  **************************** -->
+      <subFamily DsubFamily="AT32A403A">
+      <processor  Dfpu="1" Dclock="240000000"/>
+      <debug svd="SVD/AT32A403Axx_v2.svd"/>
+      <description>
+AT32A403A - ARM Cortex-M4 Core
+  Frequency up to 200 MHz
+  Flash access zero wait state
+  Single-cycle multiplier and hardware divider
+  NVIC support 16 internal, 68 external interrupts, each has 16 priority levels
+
+Memories
+  Flash size from 256KB up to 1024 KB
+  SRAM size up to 224KB
+
+Low power management
+  Power saving mode: sleep,deep-sleep and standby mode
+  Independent battery supply for RTC and battry powered domain register
+
+Advanced analog peripherals
+  Up to 3 x 12bit ADC
+
+Integrated peripherals interface
+  Up to 8 x USART/UART/Irda/LIN/ISO7816
+  Up to 4 x SPI
+  Up to 3 x I2C
+
+On-chip resources
+  Up to 2 x 16 bit Advanced Timer, 1 x SysTick Timer, 10 x 16 bit GPTM, 2 x 32 bit GPTM, 2 x WDT, 1 x RTC
+  7-chs DMA support: Timers, ADC, SPIs, I2Cs, USARTs
+  System supervisor and reset: POR,PDR,LVD
+  80% GPIO available
+  32-bit CRC, 96-bit unique ID
+  On-chip clock: HICK (8MHz), LICK (40KHz)
+      </description>
+
+      <feature type="WDT"           n="2"/>
+      <feature type="RTC"           n="32768"/>
+      <feature type="ADC"           n="3"       m="12"/>
+      <feature type="Temp"          n="-40"     m="105"/>
+      <feature type="VCC"           n="2.60"    m="3.60"/>
+
+        <!-- *************************  Device 'AT32A403ACCT7'  ***************************** -->
+        <device Dname="-AT32A403ACCT7">
+          <compile header="Device/Include/at32a403a.h"  define="AT32A403ACCT7"/>
+          <memory id="IROM1"  access="rx"       start="0x08000000"       size="0x40000"     startup="1"      default="1"/>
+          <memory id="IRAM1"  access="rw"       start="0x20000000"       size="0x18000"     init   ="0"      default="1"/>
+          <algorithm name="Flash/AT32A403A_256.FLM"                      start="0x08000000" size="0x40000"   default="1"/>
+          <algorithm name="Flash/AT32A403A_USD.FLM"                      start="0x1FFFF800" size="0x00040"   default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE1_REAMP0_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE1_REAMP1_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE2_REAMP0_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE2_REAMP1_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+        </device>
+
+        <!-- *************************  Device 'AT32A403ACCU7'  ***************************** -->
+        <device Dname="-AT32A403ACCU7">
+          <compile header="Device/Include/at32a403a.h"  define="AT32A403ACCU7"/>
+          <memory id="IROM1"  access="rx"       start="0x08000000"       size="0x40000"     startup="1"      default="1"/>
+          <memory id="IRAM1"  access="rw"       start="0x20000000"       size="0x18000"     init   ="0"      default="1"/>
+          <algorithm name="Flash/AT32A403A_256.FLM"                      start="0x08000000" size="0x40000"   default="1"/>
+          <algorithm name="Flash/AT32A403A_USD.FLM"                      start="0x1FFFF800" size="0x00040"   default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE1_REAMP0_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE1_REAMP1_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE2_REAMP0_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE2_REAMP1_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+        </device>
+
+        <!-- *************************  Device 'AT32A403ACET7'  ***************************** -->
+        <device Dname="-AT32A403ACET7">
+          <compile header="Device/Include/at32a403a.h"  define="AT32A403ACET7"/>
+          <memory id="IROM1"  access="rx"       start="0x08000000"       size="0x80000"     startup="1"      default="1"/>
+          <memory id="IRAM1"  access="rw"       start="0x20000000"       size="0x18000"     init   ="0"      default="1"/>
+          <algorithm name="Flash/AT32A403A_512.FLM"                      start="0x08000000" size="0x80000"   default="1"/>
+          <algorithm name="Flash/AT32A403A_USD.FLM"                      start="0x1FFFF800" size="0x00040"   default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE1_REAMP0_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE1_REAMP1_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE2_REAMP0_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE2_REAMP1_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+        </device>
+
+        <!-- *************************  Device 'AT32A403ACEU7'  ***************************** -->
+        <device Dname="-AT32A403ACEU7">
+          <compile header="Device/Include/at32a403a.h"  define="AT32A403ACEU7"/>
+          <memory id="IROM1"  access="rx"       start="0x08000000"       size="0x80000"     startup="1"      default="1"/>
+          <memory id="IRAM1"  access="rw"       start="0x20000000"       size="0x18000"     init   ="0"      default="1"/>
+          <algorithm name="Flash/AT32A403A_512.FLM"                      start="0x08000000" size="0x80000"   default="1"/>
+          <algorithm name="Flash/AT32A403A_USD.FLM"                      start="0x1FFFF800" size="0x00040"   default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE1_REAMP0_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE1_REAMP1_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE2_REAMP0_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE2_REAMP1_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+        </device>
+
+        <!-- *************************  Device 'AT32A403ACGT7'  ***************************** -->
+        <device Dname="-AT32A403ACGT7">
+          <compile header="Device/Include/at32a403a.h"  define="AT32A403ACGT7"/>
+          <memory id="IROM1"  access="rx"       start="0x08000000"       size="0x100000"    startup="1"      default="1"/>
+          <memory id="IRAM1"  access="rw"       start="0x20000000"       size="0x18000"     init   ="0"      default="1"/>
+          <algorithm name="Flash/AT32A403A_1024.FLM"                     start="0x08000000" size="0x100000"  default="1"/>
+          <algorithm name="Flash/AT32A403A_USD.FLM"                      start="0x1FFFF800" size="0x00040"   default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE1_REAMP0_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE1_REAMP1_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE2_REAMP0_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE2_REAMP1_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+        </device>
+
+        <!-- *************************  Device 'AT32A403ACGU7'  ***************************** -->
+        <device Dname="-AT32A403ACGU7">
+          <compile header="Device/Include/at32a403a.h"  define="AT32A403ACGU7"/>
+          <memory id="IROM1"  access="rx"       start="0x08000000"       size="0x100000"    startup="1"      default="1"/>
+          <memory id="IRAM1"  access="rw"       start="0x20000000"       size="0x18000"     init   ="0"      default="1"/>
+          <algorithm name="Flash/AT32A403A_1024.FLM"                     start="0x08000000" size="0x100000"  default="1"/>
+          <algorithm name="Flash/AT32A403A_USD.FLM"                      start="0x1FFFF800" size="0x00040"   default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE1_REAMP0_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE1_REAMP1_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE2_REAMP0_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE2_REAMP1_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+        </device>
+
+        <!-- *************************  Device 'AT32A403ARCT7'  ***************************** -->
+        <device Dname="-AT32A403ARCT7">
+          <compile header="Device/Include/at32a403a.h"  define="AT32A403ARCT7"/>
+          <memory id="IROM1"  access="rx"       start="0x08000000"       size="0x40000"     startup="1"      default="1"/>
+          <memory id="IRAM1"  access="rw"       start="0x20000000"       size="0x18000"     init   ="0"      default="1"/>
+          <algorithm name="Flash/AT32A403A_256.FLM"                      start="0x08000000" size="0x40000"   default="1"/>
+          <algorithm name="Flash/AT32A403A_USD.FLM"                      start="0x1FFFF800" size="0x00040"   default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE1_REAMP0_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE1_REAMP1_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE2_REAMP0_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE2_REAMP1_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+        </device>
+
+        <!-- *************************  Device 'AT32A403ARET7'  ***************************** -->
+        <device Dname="-AT32A403ARET7">
+          <compile header="Device/Include/at32a403a.h"  define="AT32A403ARET7"/>
+          <memory id="IROM1"  access="rx"       start="0x08000000"       size="0x80000"     startup="1"      default="1"/>
+          <memory id="IRAM1"  access="rw"       start="0x20000000"       size="0x18000"     init   ="0"      default="1"/>
+          <algorithm name="Flash/AT32A403A_512.FLM"                      start="0x08000000" size="0x80000"   default="1"/>
+          <algorithm name="Flash/AT32A403A_USD.FLM"                      start="0x1FFFF800" size="0x00040"   default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE1_REAMP0_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE1_REAMP1_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE2_REAMP0_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE2_REAMP1_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+        </device>
+
+        <!-- *************************  Device 'AT32A403ARGT7'  ***************************** -->
+        <device Dname="-AT32A403ARGT7">
+          <compile header="Device/Include/at32a403a.h"  define="AT32A403ARGT7"/>
+          <memory id="IROM1"  access="rx"       start="0x08000000"       size="0x100000"    startup="1"      default="1"/>
+          <memory id="IRAM1"  access="rw"       start="0x20000000"       size="0x18000"     init   ="0"      default="1"/>
+          <algorithm name="Flash/AT32A403A_1024.FLM"                     start="0x08000000" size="0x100000"  default="1"/>
+          <algorithm name="Flash/AT32A403A_USD.FLM"                      start="0x1FFFF800" size="0x00040"   default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE1_REAMP0_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE1_REAMP1_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE2_REAMP0_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE2_REAMP1_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+        </device>
+
+        <!-- *************************  Device 'AT32A403AVCT7'  ***************************** -->
+        <device Dname="-AT32A403AVCT7">
+          <compile header="Device/Include/at32a403a.h"  define="AT32A403AVCT7"/>
+          <memory id="IROM1"  access="rx"       start="0x08000000"       size="0x40000"     startup="1"      default="1"/>
+          <memory id="IRAM1"  access="rw"       start="0x20000000"       size="0x18000"     init   ="0"      default="1"/>
+          <algorithm name="Flash/AT32A403A_256.FLM"                      start="0x08000000" size="0x40000"   default="1"/>
+          <algorithm name="Flash/AT32A403A_USD.FLM"                      start="0x1FFFF800" size="0x00040"   default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE1_REAMP0_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE1_REAMP1_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE2_REAMP0_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE2_REAMP1_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+        </device>
+
+        <!-- *************************  Device 'AT32A403AVET7'  ***************************** -->
+        <device Dname="-AT32A403AVET7">
+          <compile header="Device/Include/at32a403a.h"  define="AT32A403AVET7"/>
+          <memory id="IROM1"  access="rx"       start="0x08000000"       size="0x80000"     startup="1"      default="1"/>
+          <memory id="IRAM1"  access="rw"       start="0x20000000"       size="0x18000"     init   ="0"      default="1"/>
+          <algorithm name="Flash/AT32A403A_512.FLM"                      start="0x08000000" size="0x80000"   default="1"/>
+          <algorithm name="Flash/AT32A403A_USD.FLM"                      start="0x1FFFF800" size="0x00040"   default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE1_REAMP0_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE1_REAMP1_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE2_REAMP0_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE2_REAMP1_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+        </device>
+
+        <!-- *************************  Device 'AT32A403AVGT7'  ***************************** -->
+        <device Dname="-AT32A403AVGT7">
+          <compile header="Device/Include/at32a403a.h"  define="AT32A403AVGT7"/>
+          <memory id="IROM1"  access="rx"       start="0x08000000"       size="0x100000"    startup="1"      default="1"/>
+          <memory id="IRAM1"  access="rw"       start="0x20000000"       size="0x18000"     init   ="0"      default="1"/>
+          <algorithm name="Flash/AT32A403A_1024.FLM"                     start="0x08000000" size="0x100000"  default="1"/>
+          <algorithm name="Flash/AT32A403A_USD.FLM"                      start="0x1FFFF800" size="0x00040"   default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE1_REAMP0_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE1_REAMP1_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE2_REAMP0_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+          <algorithm name="Flash/AT32A403A_EXT_TYPE2_REAMP1_GENERAL.FLM" start="0x08400000" size="0x1000000" default="0"/>
+        </device>
+
+     </subFamily>
+
+    </family>
+  </devices>
+
+  <conditions>
+    <!-- Compiler Conditions -->
+    <condition id="Compiler ARMCC">
+      <require Tcompiler="ARMCC"/>
+    </condition>
+
+    <!-- Device Conditions -->
+    <condition id="AT32A403Axx">
+      <description>ArteryTek AT32A403A Devices</description>
+      <require Dvendor="ArteryTek:143" Dname="-AT32A403A*"/>
+      <require Cclass="Device" Cgroup="Startup" />
+    </condition>
+
+    <condition id="AT32A403A">
+      <description>ArteryTek AT32A403A Devices</description>
+      <accept condition="AT32A403Axx"/>
+    </condition>
+
+    <condition id="AT32A403Axx ARMCC">
+      <description>ArteryTek AT32A403Axx Series devices</description>
+      <require Dvendor="ArteryTek:143" Dname="-AT32A403A*"/>
+      <require condition="Compiler ARMCC"/>
+    </condition>
+
+    <!-- Device + CMSIS Conditions -->
+    <condition id="AT32A403A CMSIS">
+      <description>ArteryTek AT32A403A Devices and CMSIS-CORE</description>
+      <require condition="AT32A403A"/>
+      <require Cclass="CMSIS" Cgroup="CORE"/>
+      <require Cclass="Device" Cgroup="at32a403a_conf"/>    
+      <require Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="crm"/>           
+    </condition>
+
+    <!-- AT32A403A STDPERIPHERALS CRM Conditions -->
+    <condition id="AT32A403A STDPERIPHERALS CRM">
+      <description>ArteryTek AT32A403A Standard Peripherals Drivers with CRM</description>
+      <require condition="AT32A403A CMSIS"/>
+      <require Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="crm"/>
+    </condition>
+
+     <!-- AT32A403A STDPERIPHERALS MISC Conditions -->
+    <condition id="AT32A403A STDPERIPHERALS MISC">
+      <description>ArteryTek  AT32A403A Standard Peripherals Drivers with MISC</description>
+      <require condition="AT32A403A CMSIS"/>
+      <require Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="misc"/>
+    </condition>
+
+     <!-- AT32A403A STDPERIPHERALS EVAL Conditions -->
+    <condition id="AT32A403A STDPERIPHERALS EVB">
+      <description>ArteryTek AT32A403A Standard Peripherals Drivers with EVB</description>
+      <require condition="AT32A403A CMSIS"/>
+      <require Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="gpio"/>
+      <require Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="exint"/>
+      <require Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="usart"/>
+    </condition>
+  </conditions>
+
+  <components>
+  <!-- at32a403a_firmware_library -->
+    <component Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="acc" Cversion="2.0.0" condition="AT32A403A STDPERIPHERALS CRM">
+      <description>Auto Clock Calibration (ACC) driver for AT32A403A Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_ACC
+        </RTE_Components_h>
+        <files>
+          <!-- ACC file -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/at32a403a_acc.h"/>
+          <file category="source" name="Device/Firmware/Peripherals/src/at32a403a_acc.c" attr="config" version="2.0.0" />
+        </files>
+    </component>
+
+    <component Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="adc" Cversion="2.0.0" condition="AT32A403A STDPERIPHERALS CRM">
+      <description>Analog-to-digital converter (ADC) driver for AT32A403A Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_ADC
+        </RTE_Components_h>
+        <files>
+          <!-- ADC file -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/at32a403a_adc.h"/>
+          <file category="source" name="Device/Firmware/Peripherals/src/at32a403a_adc.c" attr="config" version="2.0.0" />
+        </files>
+    </component>
+
+    <component Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="bpr" Cversion="2.0.0" condition="AT32A403A STDPERIPHERALS CRM">
+      <description>Battery Powered Register (BPR) driver for AT32A403A Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_BPR
+        </RTE_Components_h>
+        <files>
+          <!-- BPR file -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/at32a403a_bpr.h"/>
+          <file category="source" name="Device/Firmware/Peripherals/src/at32a403a_bpr.c" attr="config" version="2.0.0" />
+        </files>
+    </component>
+
+    <component Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="can" Cversion="2.0.0" condition="AT32A403A STDPERIPHERALS CRM">
+      <description>CAN (CAN) driver for AT32A403A Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_CAN
+        </RTE_Components_h>
+        <files>
+          <!-- CAN file -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/at32a403a_can.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/at32a403a_can.c" attr="config" version="2.0.0" />
+        </files>
+    </component>
+
+    <component Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="crc" Cversion="2.0.0" condition="AT32A403A STDPERIPHERALS CRM">
+      <description>Cyclic Redundancy Check (CRC) driver for AT32A403A Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_CRC
+        </RTE_Components_h>
+        <files>
+          <!-- CRC file -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/at32a403a_crc.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/at32a403a_crc.c" attr="config" version="2.0.0" />
+        </files>
+    </component>
+
+    <component Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="crm" Cversion="2.0.0" condition="AT32A403A STDPERIPHERALS MISC">
+      <description>Clock and Reset Management (CRM) driver for AT32A403A Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_CRM
+        </RTE_Components_h>
+        <files>
+          <!-- CRM file -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/at32a403a_crm.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/at32a403a_crm.c" attr="config" version="2.0.0" />
+        </files>
+    </component>
+
+    <component Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="dac" Cversion="2.0.0" condition="AT32A403A STDPERIPHERALS CRM">
+      <description>Digital-to-Analog-to converter (DAC) driver for AT32A403A Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_CRM
+        </RTE_Components_h>
+        <files>
+          <!-- DAC file -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/at32a403a_dac.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/at32a403a_dac.c" attr="config" version="2.0.0" />
+        </files>
+    </component>
+
+    <component Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="debug" Cversion="2.0.0" condition="AT32A403A STDPERIPHERALS CRM">
+      <description>Debug (DEBUG) driver for AT32A403A Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_DEBUG
+        </RTE_Components_h>
+        <files>
+          <!-- DEBUG file -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/at32a403a_debug.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/at32a403a_debug.c" attr="config" version="2.0.0" />
+        </files>
+    </component>
+
+    <component Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="dma" Cversion="2.0.0" condition="AT32A403A STDPERIPHERALS CRM">
+      <description>Direct Memory Access (DMA) driver for AT32A403A Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_DMA
+        </RTE_Components_h>
+        <files>
+          <!-- DMA file -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/at32a403a_dma.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/at32a403a_dma.c" attr="config" version="2.0.0" />
+        </files>
+    </component>
+
+    <component Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="emac" Cversion="2.0.0" condition="AT32A403A STDPERIPHERALS CRM">
+      <description>Ethernet MAC (EMAC) driver for AT32A403A Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_EMAC
+        </RTE_Components_h>
+        <files>
+          <!-- EMAC file -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/at32a403a_emac.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/at32a403a_emac.c" attr="config" version="2.0.0" />
+        </files>
+    </component>
+
+    <component Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="exint" Cversion="2.0.0" condition="AT32A403A STDPERIPHERALS CRM">
+      <description>External Interrupt/Event (EXINT) driver for AT32A403A Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_EXINT
+        </RTE_Components_h>
+        <files>
+          <!-- EXINT file -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/at32a403a_exint.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/at32a403a_exint.c" attr="config" version="2.0.0" />
+        </files>
+    </component>
+
+    <component Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="flash" Cversion="2.0.0" condition="AT32A403A STDPERIPHERALS CRM">
+      <description>Flash Memory Controller (FLASH) driver for AT32A403A Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_FLASH
+        </RTE_Components_h>
+        <files>
+          <!-- FLASH file -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/at32a403a_flash.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/at32a403a_flash.c" attr="config" version="2.0.0" />
+        </files>
+    </component>
+
+    <component Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="gpio" Cversion="2.0.0" condition="AT32A403A STDPERIPHERALS CRM">
+      <description>General-purpose and Alternate-function I/Os (GPIO) driver for AT32A403A Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_GPIO
+        </RTE_Components_h>
+        <files>
+          <!-- GPIO file -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/at32a403a_gpio.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/at32a403a_gpio.c" attr="config" version="2.0.0" />
+        </files>
+    </component>
+
+    <component Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="i2c" Cversion="2.0.0" condition="AT32A403A STDPERIPHERALS CRM">
+      <description>Inter-integrated Circuit (I2C) driver for AT32A403A Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_I2C
+        </RTE_Components_h>
+        <files>
+          <!-- I2C file -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/at32a403a_i2c.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/at32a403a_i2c.c" attr="config" version="2.0.0" />
+        </files>
+    </component>
+
+    <component Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="misc" Cversion="2.0.0" condition="AT32A403A CMSIS">
+      <description>MISC driver for AT32A403A Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_MISC
+        </RTE_Components_h>
+        <files>
+          <!-- MISC file -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/at32a403a_misc.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/at32a403a_misc.c" attr="config" version="2.0.0" />
+        </files>
+    </component>
+
+    <component Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="pwc" Cversion="2.0.0" condition="AT32A403A STDPERIPHERALS CRM">
+      <description>Power Control Unit(PWC) driver for AT32A403A Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_PWC
+        </RTE_Components_h>
+        <files>
+          <!-- PWC file -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/at32a403a_pwc.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/at32a403a_pwc.c" attr="config" version="2.0.0" />
+        </files>
+    </component>
+
+    <component Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="rtc" Cversion="2.0.0" condition="AT32A403A STDPERIPHERALS CRM">
+      <description>Real-time Clock (RTC) driver for AT32A403A Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_RTC
+        </RTE_Components_h>
+        <files>
+          <!-- RTC file -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/at32a403a_rtc.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/at32a403a_rtc.c" attr="config" version="2.0.0" />
+        </files>
+    </component>
+
+    <component Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="sdio" Cversion="2.0.0" condition="AT32A403A STDPERIPHERALS CRM">
+      <description>SD/SDIO MMC card host interface (SDIO) driver for AT32A403A Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_SDIO
+        </RTE_Components_h>
+        <files>
+          <!-- SDIO file -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/at32a403a_sdio.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/at32a403a_sdio.c" attr="config" version="2.0.0" />
+        </files>
+    </component>
+
+    <component Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="spi" Cversion="2.0.0" condition="AT32A403A STDPERIPHERALS CRM">
+      <description>Serial Peripheral Interface / Inter-IC Sound (SPI) driver for AT32A403A Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_SPI
+        </RTE_Components_h>
+        <files>
+          <!-- SPI file -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/at32a403a_spi.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/at32a403a_spi.c" attr="config" version="2.0.0" />
+        </files>
+    </component>
+
+    <component Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="tmr" Cversion="2.0.0" condition="AT32A403A STDPERIPHERALS CRM">
+      <description>TIMER driver for AT32A403A Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_TMR
+        </RTE_Components_h>
+        <files>
+          <!-- TTMER file -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/at32a403a_tmr.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/at32a403a_tmr.c" attr="config" version="2.0.0" />
+        </files>
+    </component>
+
+    <component Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="usart" Cversion="2.0.0" condition="AT32A403A STDPERIPHERALS CRM">
+      <description>Universal Synchronous Asynchronous Receiver Transmitter (USART) driver for AT32A403A Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_USART
+        </RTE_Components_h>
+        <files>
+          <!-- USART file -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/at32a403a_usart.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/at32a403a_usart.c" attr="config" version="2.0.0" />
+        </files>
+    </component>
+
+    <component Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="usb" Cversion="2.0.0" condition="AT32A403A STDPERIPHERALS CRM">
+      <description>Universal Serial Bus driver for AT32A403A Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_USB
+        </RTE_Components_h>
+        <files>
+          <!-- USB file -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/at32a403a_usb.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/at32a403a_usb.c" attr="config" version="2.0.0" />
+        </files>
+    </component>
+
+    <component Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="wdt" Cversion="2.0.0" condition="AT32A403A STDPERIPHERALS CRM">
+      <description>watchdog timer(WDT) driver for AT32A403A Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_WDT
+        </RTE_Components_h>
+        <files>
+          <!-- WDT file -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/at32a403a_wdt.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/at32a403a_wdt.c" attr="config" version="2.0.0" />
+        </files>
+    </component>
+
+    <component Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="wwdt" Cversion="2.0.0" condition="AT32A403A STDPERIPHERALS CRM">
+      <description>Window Watchdog Timer (WWDT) driver for AT32A403A Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_WWDT
+        </RTE_Components_h>
+        <files>
+          <!-- WWDT file -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/at32a403a_wwdt.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/at32a403a_wwdt.c" attr="config" version="2.0.0" />
+        </files>
+    </component>
+
+    <component Cclass="Device" Cgroup="at32a403a_firmware_library" Csub="xmc" Cversion="2.0.0" condition="AT32A403A STDPERIPHERALS CRM">
+      <description>External Memory Controller (XMC) driver for AT32A403A Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_XMC
+        </RTE_Components_h>
+        <files>
+          <!-- XMC file -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/at32a403a_xmc.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/at32a403a_xmc.c" attr="config" version="2.0.0" />
+        </files>
+    </component>
+
+    <!-- Utilities AT32A403A -->
+    <component Cclass="Device" Cgroup="evb" Csub="at-start-a403a" Cversion="2.0.0" condition="AT32A403A STDPERIPHERALS EVB">
+      <description>Firmware functions to manage Leds, Keys, COM ports</description>
+      <files>
+        <!-- include folder -->
+        <file category="header" name="Device/Utilities/at32a403a_board.h" />
+        <!-- evb file -->
+        <file category="source" name="Device/Utilities/at32a403a_board.c" attr="config" version="2.0.0"/>
+      </files>
+    </component>
+
+    <!-- Config AT32A403A -->
+    <component Cclass="Device" Cgroup="at32a403a_conf" Cversion="2.0.0" condition="AT32A403A CMSIS">
+      <description>Configuration file</description>
+      <files>
+        <!-- include folder -->
+        <file category="header" name="Device/Include/at32a403a_conf.h" attr="config" version="2.0.0"/>
+      </files>
+    </component>
+
+   <!-- Startup AT32A403A  -->
+    <component Cclass="Device" Cgroup="Startup"   Cversion="2.0.0" condition="AT32A403A">
+      <description>System Startup for ArteryTek AT32A403A  Devices</description>
+      <files>
+        <!-- include folder -->
+        <file category="include" name="Device/Include/"/>
+        <file category="header" name="Device/Include/at32a403a.h"/>
+        <!-- startup file -->
+        <file category="source" name="Device/Source/ARM/startup_at32a403a.s" attr="config" version="2.0.0" condition="AT32A403Axx ARMCC"/>
+        <!-- system file -->
+        <file category="source" name="Device/Source/system_at32a403a.c"      attr="config" version="2.0.0"/>
+      </files>
+    </component>
+  </components>
+</package>

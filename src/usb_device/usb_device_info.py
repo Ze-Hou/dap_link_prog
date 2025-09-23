@@ -2,6 +2,7 @@ import usb.core
 import usb.util
 import usb.backend.libusb1
 from typing import Optional, Dict, Any, Union
+import logging
 
 class USBDeviceInfo:
     def __init__(self, libusb_backend="./libusb-1.0.29/MinGW64/dll/libusb-1.0.dll"):
@@ -117,43 +118,42 @@ class USBDeviceInfo:
         device = dap_devices['dap']
         if device:
             for i, device_class in enumerate(device):
-                print('='*50)
+                logging.info('='*50)
                 if device_class['HID']:
-                    print("HID Devices:")
+                    logging.info("HID Devices:")
                     for i, hid_device in enumerate(device_class['HID']):
-                        print(f"  HID device {i+1}:")
-                        print(f"    VID: 0x{hid_device['vid']:04X}, PID: 0x{hid_device['pid']:04X}")
-                        print(f"    Manufacturer: {hid_device['manufacturer']}")
-                        print(f"    Product: {hid_device['product']}")
-                        print(f"    Serial Number: {hid_device['serial_number']}")
-                        print(f"    Interface: {hid_device['intf_desc']}")
-                        print(f"    Configuration Value: {hid_device['cfg_value']}")
-                        print(f"    Interface Number: {hid_device['interface']}")
+                        logging.info(f"  HID device {i+1}:")
+                        logging.info(f"    VID: 0x{hid_device['vid']:04X}, PID: 0x{hid_device['pid']:04X}")
+                        logging.info(f"    Manufacturer: {hid_device['manufacturer']}")
+                        logging.info(f"    Product: {hid_device['product']}")
+                        logging.info(f"    Serial Number: {hid_device['serial_number']}")
+                        logging.info(f"    Interface: {hid_device['intf_desc']}")
+                        logging.info(f"    Configuration Value: {hid_device['cfg_value']}")
+                        logging.info(f"    Interface Number: {hid_device['interface']}")
                         if hid_device['in_ep']:
-                            print(f"    IN EP: 0x{hid_device['in_ep']:02X}")
-                            print(f"    IN EP Max Packet Size: {hid_device['in_ep_packet_size']}")
+                            logging.info(f"    IN EP: 0x{hid_device['in_ep']:02X}")
+                            logging.info(f"    IN EP Max Packet Size: {hid_device['in_ep_packet_size']}")
                         if hid_device['out_ep']:
-                            print(f"    OUT EP: 0x{hid_device['out_ep']:02X}")
-                            print(f"    OUT EP Max Packet Size: {hid_device['out_ep_packet_size']}")
-                
+                            logging.info(f"    OUT EP: 0x{hid_device['out_ep']:02X}")
+                            logging.info(f"    OUT EP Max Packet Size: {hid_device['out_ep_packet_size']}")
                 if device_class['WinUSB']:
-                    print("WinUSB Devices:")
+                    logging.info("WinUSB Devices:")
                     for i, winusb_device in enumerate(device_class['WinUSB']):
-                        print(f"  WinUSB device {i+1}:")
-                        print(f"    VID: 0x{winusb_device['vid']:04X}, PID: 0x{winusb_device['pid']:04X}")
-                        print(f"    Manufacturer: {winusb_device['manufacturer']}")
-                        print(f"    Product: {winusb_device['product']}")
-                        print(f"    Serial Number: {winusb_device['serial_number']}")
-                        print(f"    Interface: {winusb_device['intf_desc']}")
-                        print(f"    Configuration Value: {winusb_device['cfg_value']}")
-                        print(f"    Interface Number: {winusb_device['interface']}")
+                        logging.info(f"  WinUSB device {i+1}:")
+                        logging.info(f"    VID: 0x{winusb_device['vid']:04X}, PID: 0x{winusb_device['pid']:04X}")
+                        logging.info(f"    Manufacturer: {winusb_device['manufacturer']}")
+                        logging.info(f"    Product: {winusb_device['product']}")
+                        logging.info(f"    Serial Number: {winusb_device['serial_number']}")
+                        logging.info(f"    Interface: {winusb_device['intf_desc']}")
+                        logging.info(f"    Configuration Value: {winusb_device['cfg_value']}")
+                        logging.info(f"    Interface Number: {winusb_device['interface']}")
                         if winusb_device['in_ep']:
-                            print(f"    IN EP: 0x{winusb_device['in_ep']:02X}")
-                            print(f"    IN EP Max Packet Size: {winusb_device['in_ep_packet_size']}")
+                            logging.info(f"    IN EP: 0x{winusb_device['in_ep']:02X}")
+                            logging.info(f"    IN EP Max Packet Size: {winusb_device['in_ep_packet_size']}")
                         if winusb_device['out_ep']:
-                            print(f"    OUT EP: 0x{winusb_device['out_ep']:02X}")
-                            print(f"    OUT EP Max Packet Size: {winusb_device['out_ep_packet_size']}")
-                print('='*50)
+                            logging.info(f"    OUT EP: 0x{winusb_device['out_ep']:02X}")
+                            logging.info(f"    OUT EP Max Packet Size: {winusb_device['out_ep_packet_size']}")
+                logging.info('='*50)
 
     def print_dap_devices(self, dap_devices):
         devices = dap_devices['dap']
@@ -161,12 +161,11 @@ class USBDeviceInfo:
             for i, device_class in enumerate(devices):
                 if device_class['HID']:
                     for i, hid_device in enumerate(device_class['HID']):
-                        print(f"VID: 0x{hid_device['vid']:04X} PID: 0x{hid_device['pid']:04X} ", \
-                                f"{hid_device['intf_desc']} ", \
-                                    f"SN: {hid_device['serial_number']}")
-                        
+                        logging.info(f"VID: 0x{hid_device['vid']:04X} PID: 0x{hid_device['pid']:04X} "
+                                     f"{hid_device['intf_desc']} "
+                                     f"SN: {hid_device['serial_number']}")
                 if device_class['WinUSB']:
                     for i, winusb_device in enumerate(device_class['WinUSB']):
-                        print(f"VID: 0x{winusb_device['vid']:04X} PID: 0x{winusb_device['pid']:04X}", \
-                                f"{winusb_device['intf_desc']}", \
-                                    f"SN: {winusb_device['serial_number']}")
+                        logging.info(f"VID: 0x{winusb_device['vid']:04X} PID: 0x{winusb_device['pid']:04X} "
+                                     f"{winusb_device['intf_desc']} "
+                                     f"SN: {winusb_device['serial_number']}")

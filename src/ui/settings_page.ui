@@ -1,0 +1,519 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Dialog</class>
+ <widget class="QDialog" name="Dialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>240</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>400</width>
+    <height>240</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>400</width>
+    <height>240</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Dialog</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_0">
+   <property name="leftMargin">
+    <number>5</number>
+   </property>
+   <property name="topMargin">
+    <number>5</number>
+   </property>
+   <property name="rightMargin">
+    <number>5</number>
+   </property>
+   <property name="bottomMargin">
+    <number>5</number>
+   </property>
+   <item>
+    <widget class="QFrame" name="frame">
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_0" stretch="0,1">
+      <property name="leftMargin">
+       <number>5</number>
+      </property>
+      <property name="topMargin">
+       <number>5</number>
+      </property>
+      <property name="rightMargin">
+       <number>5</number>
+      </property>
+      <property name="bottomMargin">
+       <number>5</number>
+      </property>
+      <item>
+       <widget class="QListWidget" name="listWidget">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>100</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>100</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <item>
+         <property name="text">
+          <string>DAP设置</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>目标设置</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item>
+       <widget class="QStackedWidget" name="stackedWidget">
+        <property name="currentIndex">
+         <number>1</number>
+        </property>
+        <widget class="QWidget" name="page_0">
+         <layout class="QVBoxLayout" name="verticalLayout_1" stretch="1,1,1">
+          <property name="spacing">
+           <number>4</number>
+          </property>
+          <property name="leftMargin">
+           <number>5</number>
+          </property>
+          <property name="topMargin">
+           <number>5</number>
+          </property>
+          <property name="rightMargin">
+           <number>5</number>
+          </property>
+          <property name="bottomMargin">
+           <number>5</number>
+          </property>
+          <item>
+           <widget class="QGroupBox" name="groupBox_0_0">
+            <property name="title">
+             <string>连接与复位:</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_1" stretch="0,1,0,1">
+             <property name="spacing">
+              <number>4</number>
+             </property>
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="label_0_0">
+               <property name="text">
+                <string>连接:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="comboBox_0_0">
+               <item>
+                <property name="text">
+                 <string>正常连接</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>预先复位</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_0_1">
+               <property name="text">
+                <string>复位:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="comboBox_0_1">
+               <item>
+                <property name="text">
+                 <string>自动</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>软件复位</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>硬件复位</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="groupBox_0_1">
+            <property name="title">
+             <string>下载设置:</string>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_1" rowstretch="0,0" columnstretch="0,1,1">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="horizontalSpacing">
+              <number>6</number>
+             </property>
+             <property name="verticalSpacing">
+              <number>2</number>
+             </property>
+             <item row="0" column="0" rowspan="2">
+              <widget class="QLabel" name="label_0_2">
+               <property name="text">
+                <string>擦除方式:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1" rowspan="2">
+              <widget class="QComboBox" name="comboBox_0_2">
+               <item>
+                <property name="text">
+                 <string>不擦除</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>扇区擦除</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>全片擦除</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QCheckBox" name="checkBox_0_0">
+               <property name="text">
+                <string>验证</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="2">
+              <widget class="QCheckBox" name="checkBox_0_1">
+               <property name="text">
+                <string>复位运行</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="groupBox_0_2">
+            <property name="title">
+             <string>DAP LINK:</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,1,0,1">
+             <property name="spacing">
+              <number>4</number>
+             </property>
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="label_0_3">
+               <property name="text">
+                <string>接口:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="comboBox_0_3">
+               <item>
+                <property name="text">
+                 <string>SWD</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>JTAG</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_0_4">
+               <property name="text">
+                <string>时钟:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="comboBox_0_4">
+               <item>
+                <property name="text">
+                 <string>10MHz</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>5MHz</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>2MHz</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>1MHz</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>500KHz</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>200KHz</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>100KHz</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>50KHz</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>20KHz</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>10KHz</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="page_1">
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <property name="leftMargin">
+           <number>5</number>
+          </property>
+          <property name="topMargin">
+           <number>5</number>
+          </property>
+          <property name="rightMargin">
+           <number>5</number>
+          </property>
+          <property name="bottomMargin">
+           <number>5</number>
+          </property>
+          <item>
+           <widget class="QGroupBox" name="groupBox_1_0">
+            <property name="title">
+             <string>器件选择:</string>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_2" rowstretch="0,0,0,0,0" columnstretch="0,1">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item row="1" column="1">
+              <widget class="QComboBox" name="comboBox_1_1"/>
+             </item>
+             <item row="2" column="1">
+              <widget class="QComboBox" name="comboBox_1_2"/>
+             </item>
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_1_0">
+               <property name="text">
+                <string>搜索芯片:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="label_1_2">
+               <property name="text">
+                <string>系　　列:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="0">
+              <widget class="QLabel" name="label_1_3">
+               <property name="text">
+                <string>型　　号:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="1">
+              <widget class="QComboBox" name="comboBox_1_3"/>
+             </item>
+             <item row="0" column="1">
+              <widget class="QComboBox" name="comboBox_1_0"/>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_1_1">
+               <property name="text">
+                <string>厂　　商:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="0">
+              <widget class="QLabel" name="label_1_4">
+               <property name="text">
+                <string>算　　法:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="1">
+              <widget class="QComboBox" name="comboBox_1_4"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <tabstops>
+  <tabstop>listWidget</tabstop>
+  <tabstop>comboBox_0_0</tabstop>
+  <tabstop>comboBox_0_1</tabstop>
+  <tabstop>comboBox_0_2</tabstop>
+  <tabstop>checkBox_0_0</tabstop>
+  <tabstop>checkBox_0_1</tabstop>
+  <tabstop>comboBox_0_3</tabstop>
+  <tabstop>comboBox_0_4</tabstop>
+  <tabstop>comboBox_1_0</tabstop>
+  <tabstop>comboBox_1_1</tabstop>
+  <tabstop>comboBox_1_2</tabstop>
+  <tabstop>comboBox_1_3</tabstop>
+  <tabstop>comboBox_1_4</tabstop>
+ </tabstops>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>accepted()</signal>
+   <receiver>Dialog</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>223</x>
+     <y>226</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>157</x>
+     <y>239</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>Dialog</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>291</x>
+     <y>232</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>286</x>
+     <y>239</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

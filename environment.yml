@@ -1,0 +1,50 @@
+name: env1_py310
+channels:
+  - defaults
+  - https://repo.anaconda.com/pkgs/main
+  - https://repo.anaconda.com/pkgs/r
+  - https://repo.anaconda.com/pkgs/msys2
+dependencies:
+  - bzip2=1.0.8=h2bbff1b_6
+  - ca-certificates=2025.7.15=haa95532_0
+  - expat=2.7.1=h8ddb27b_0
+  - libffi=3.4.4=hd77b12b_1
+  - openssl=3.0.17=h35632f6_0
+  - pip=25.1=pyhc872135_2
+  - python=3.10.18=h981015d_0
+  - setuptools=78.1.1=py310haa95532_0
+  - sqlite=3.50.2=hda9a48d_1
+  - tk=8.6.15=hf199647_0
+  - tzdata=2025b=h04d1e81_0
+  - ucrt=10.0.22621.0=haa95532_0
+  - vc=14.3=h2df5915_10
+  - vc14_runtime=14.44.35208=h4927774_10
+  - vs2015_runtime=14.44.35208=ha6b5a95_10
+  - wheel=0.45.1=py310haa95532_0
+  - xz=5.6.4=h4754444_1
+  - zlib=1.2.13=h8cc25b3_1
+  - pip:
+      - click==8.2.1
+      - colorama==0.4.6
+      - colorthief==0.2.1
+      - darkdetect==0.8.0
+      - numpy==2.2.6
+      - packaging==25.0
+      - pillow==11.3.0
+      - pyelftools==0.32
+      - pyqt-fluent-widgets==1.8.7
+      - pyqt5==5.15.9
+      - pyqt5-frameless-window==0.7.3
+      - pyqt5-plugins==5.15.9.2.3
+      - pyqt5-qt5==5.15.2
+      - pyqt5-sip==12.17.0
+      - pyqt5-tools==5.15.9.3.3
+      - python-dotenv==1.1.1
+      - pyusb==1.3.1
+      - pywin32==311
+      - qt5-applications==5.15.2.2.3
+      - qt5-tools==5.15.2.1.3
+      - scipy==1.15.3
+      - sip==6.12.0
+      - tomli==2.2.1
+prefix: D:\Program_Files\Anaconda3\envs\env1_py310
