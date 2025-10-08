@@ -18,7 +18,7 @@ class DAPLinkStyle:
                     color: #222222;
                     background: #f7fafc;
                     border: none;
-                    
+
                 }
                 QMenuBar::item:selected {
                     background: #d0d7e2;
@@ -37,7 +37,7 @@ class DAPLinkStyle:
                 }
                 """
             )
-        
+
         @staticmethod
         def get_status_bar_style():
             return (
@@ -49,11 +49,11 @@ class DAPLinkStyle:
                 }
                 """
             )
-        
+
         @staticmethod
         def get_group_box_style():
             return (
-                """                     
+                """
                 QGroupBox {
                     border: 2px solid #a0a0a0;    /* 线宽2px，颜色#a0a0a0 */
                     border-radius: 6px;           /* 圆角可选 */
@@ -66,7 +66,7 @@ class DAPLinkStyle:
                 }
                 """
             )
-        
+
         @staticmethod
         def get_refresh_button_style():
             return (
@@ -80,7 +80,7 @@ class DAPLinkStyle:
                 }
                 """
             )
-        
+
         @staticmethod
         def get_combo_box_style():
             return (
@@ -126,7 +126,7 @@ class DAPLinkStyle:
                 }}
                 """
             )
-        
+
         @staticmethod
         def get_progress_bar_style():
             return (
@@ -197,7 +197,7 @@ class DAPLinkStyle:
                 }
                 """
             )
-        
+
         @staticmethod
         def get_text_browser_shadow_effect():
             shadow = QGraphicsDropShadowEffect()
@@ -205,13 +205,13 @@ class DAPLinkStyle:
             shadow.setOffset(2, 2)
             shadow.setColor(Qt.GlobalColor.gray)
             return shadow
-        
-        
+
+
     class InputAddrSizePage:
         @staticmethod
         def get_group_box_style():
             return (
-                """                     
+                """
                 QGroupBox {
                     border: 2px solid #a0a0a0;    /* 线宽2px，颜色#a0a0a0 */
                     border-radius: 6px;           /* 圆角可选 */
@@ -224,12 +224,12 @@ class DAPLinkStyle:
                 }
                 """
             )
-        
+
     class SettingsPage:
         @staticmethod
         def get_group_box_style():
             return (
-                """                     
+                """
                 QGroupBox {
                     border: 2px solid #a0a0a0;    /* 线宽2px，颜色#a0a0a0 */
                     border-radius: 6px;           /* 圆角可选 */
@@ -242,7 +242,7 @@ class DAPLinkStyle:
                 }
                 """
             )
-        
+
         @staticmethod
         def get_list_widget_style():
             return (
@@ -298,7 +298,7 @@ class DAPLinkStyle:
                 }
                 """
             )
-        
+
         @staticmethod
         def get_stacked_widget_style():
             return (
@@ -310,6 +310,45 @@ class DAPLinkStyle:
                 }
                 """
             )
-        
-        
-        
+
+    class DateTablePage:
+        @staticmethod
+        def get_table_widget_style():
+            return (
+                """
+                QTableWidget {
+                    background: #F8F9FA;
+                    border: none;
+                    gridline-color: #E0E0E0;
+                    font: 10pt "consolas";
+                }
+                QTableWidget:focus {
+                    outline: none;
+                    border: none;
+                }
+                QHeaderView::section {
+                    background: #F3F4F6;
+                    font: 10pt "consolas";
+                    color: #444;
+                    padding: 0px;
+                    border: none;
+                    border-bottom: 1px solid #E0E0E0;
+                }
+                QTableWidget::item {
+                    font: 10pt "consolas";
+                    padding: 0px;
+                    border: none;
+                    text-align: center;
+                }
+                QTableWidget::item:selected {
+                    background: #D0EBFF;
+                    color: #222;
+                }
+                QTableWidget::item:focus {
+                    outline: none;
+                    border: 1px solid #a0a0a0;
+                }
+                """
+            )
+
+

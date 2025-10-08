@@ -32,7 +32,6 @@ class InputAddrSizeUIBase(QDialog):
         self.label_1.setText("起始地址:")
         self.label_2.setText("大小(字节):")
 
-
         self.lineEdit_1.setFont(QFont("consolas", 10))
         self.lineEdit_2.setFont(QFont("consolas", 10))
 
@@ -76,6 +75,7 @@ class InputAddrSizeUIBase(QDialog):
             QMessageBox.critical(self, "格式错误", f"输入格式错误：\n{e}", QMessageBox.Ok)
             return
         super().accept()
+
 
 class EraseDialog(InputAddrSizeUIBase):
     def __init__(self, parent=None):

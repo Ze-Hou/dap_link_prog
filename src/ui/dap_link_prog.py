@@ -26,6 +26,7 @@ from dap_link_prog_icon import DAPIcon
 from dap_link_style import DAPLinkStyle
 from input_addr_size_page import EraseDialog, ReadFlashDialog
 from settings_page import SettingsDialog, SettingsData
+from data_table_page import FlashDataTableDialog
 from dap_link_handle_thread import DAPLinkHandleThread, DAPLinkOperation, DAPLinkSyncData
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
@@ -409,6 +410,9 @@ class DAPLinkProgUI(QMainWindow):
             case DAPLinkOperation.Erase:
                 self._handle_sync_data_erase_target(sync_data)
 
+            case DAPLinkOperation.ReadFlash:
+                self._handle_sync_data_read_flash(sync_data)
+
     def _handle_sync_data_refresh_dap(self, sync_data: dict):
         item_count = self.dap_comboBox.count()
         last_dap_devices = [self.dap_comboBox.itemText(i) for i in range(item_count)]
@@ -475,6 +479,20 @@ class DAPLinkProgUI(QMainWindow):
             logging.error("no suboperation in sync data for Erase operation.")
             return
         self._handle_sync_data_suboperation(sync_data)
+
+    def _handle_sync_data_read_flash(self, sync_data: dict):
+        self._handle_sync_data_progress(sync_data, "R:")
+        data = sync_data.get('data', [])
+        flash_data = data[0]
+        addr = data[1]
+        size = data[2]
+        flash_data_table_dialog = FlashDataTableDialog(self)
+        flash_data_table_dialog.set_table_data(flash_data, addr, size)
+        res = flash_data_table_dialog.exec_()
+        if res == QDialog.Accepted:
+            print("flash data table dialog accepted.")
+        elif res == QDialog.Rejected:
+            print("flash data table dialog rejected.")
 
     def _handle_sync_data_suboperation(self, sync_data: dict):
         operation = sync_data.get('operation')

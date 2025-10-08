@@ -459,7 +459,3 @@ class PrasePdscFile:
                         'svd': svd
                     }
         return parse_data
-
-
-if __name__ == "__main__":
-    PrasePdscFile.get_all_device_info_from_pdsc()

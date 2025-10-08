@@ -207,12 +207,10 @@ class DAPLinkHandleThread(QThread):
         if self._check_select_dap():
             if self.dap_handle.config_dap_device():
                 if self.dap_handle.read_target_flash(read_start_addr, read_size, buffer):
-                    sync_data['data'] = buffer.copy()
+                    sync_data['data'] = [buffer.copy(), read_start_addr, read_size]
                     sync_data['status'] = True
+                    sync_data['progress'] = 100
                 self.dap_handle.unconfig_dap_device()
-        print(len(buffer), "\n")
-        for i in range(len(buffer)):
-            print(f"0x{buffer[i]:08X}")
         self.dap_link_handle_sync_signal.emit(copy.deepcopy(sync_data))
 
     def _erase_target_erase(self, sync_data, erase) -> bool:
