@@ -268,7 +268,7 @@
            <property name="title">
             <string>状态信息:</string>
            </property>
-           <layout class="QGridLayout" name="gridLayout_0">
+           <layout class="QGridLayout" name="gridLayout_0" rowstretch="0,0" columnstretch="0,1">
             <property name="leftMargin">
              <number>5</number>
             </property>
@@ -296,7 +296,10 @@
             <item row="1" column="1">
              <widget class="QProgressBar" name="progressBar">
               <property name="value">
-               <number>24</number>
+               <number>0</number>
+              </property>
+              <property name="textDirection">
+               <enum>QProgressBar::TopToBottom</enum>
               </property>
              </widget>
             </item>
@@ -399,14 +402,7 @@
     </property>
     <addaction name="actionOpen"/>
    </widget>
-   <widget class="QMenu" name="menuAbout">
-    <property name="title">
-     <string>About</string>
-    </property>
-    <addaction name="actionVersion"/>
-   </widget>
    <addaction name="menuFile"/>
-   <addaction name="menuAbout"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QToolBar" name="toolBar">

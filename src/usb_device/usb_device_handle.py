@@ -40,21 +40,21 @@ class USBDeviceHandle(USBDeviceInfo):
 
             return self.dap_devices_list
         return None
-    
+
     def print_dap_devices(self, dap_devices):
         if dap_devices:
             for i, dap_device in enumerate(dap_devices):
                 logging.info(f"index: {i} VID: 0x{dap_device['vid']:04X} PID: 0x{dap_device['pid']:04X} "
                              f"{dap_device['intf_desc']} SN: {dap_device['serial_number']}")
-            
+
     def select_dap_device_by_index(self, index):
         if index < len(self.dap_devices_list):
             self.select_dap_device_index = index
             self._print_selected_dap_device()
             return True
-        
+
         return False
-    
+
     def select_dap_device_by_sn(self, serial_number):
         match_index = []
         for i, dap_device in enumerate(self.dap_devices_list):
@@ -71,18 +71,18 @@ class USBDeviceHandle(USBDeviceInfo):
             self.select_dap_device_index = match_index[0]
             self._print_selected_dap_device()
             return True
-        
+
         return False
-    
+
     def select_dap_device_by_intf_desc_and_sn(self, intf_desc, serial_number):
         for i, dap_device in enumerate(self.dap_devices_list):
             if dap_device['intf_desc'] == intf_desc and dap_device['serial_number'] == serial_number:
                 self.select_dap_device_index = i
                 self._print_selected_dap_device()
                 return True
-        
+
         return False
-    
+
     def _print_selected_dap_device(self):
         if self.select_dap_device_index < len(self.dap_devices_list):
             dap_device = self.dap_devices_list[self.select_dap_device_index]
@@ -102,7 +102,7 @@ class USBDeviceHandle(USBDeviceInfo):
         self.reset_dap_device(dap_device)
         self.clean_in_ep()
         return True
-    
+
     def unconfig_dap_device(self):
         if self.select_dap_device_index == 0xFF:
             logging.error("No DAP device selected.")
@@ -115,7 +115,7 @@ class USBDeviceHandle(USBDeviceInfo):
             except Exception:
                 return False
         return True
-    
+
     def unconfig_all_dap_devices(self):
         for dap_device in self.dap_devices_list:
             if self._check_dap_device_is_configured(dap_device) is True:
@@ -125,7 +125,7 @@ class USBDeviceHandle(USBDeviceInfo):
                 except Exception:
                     return False
         return True
-        
+
     def _check_dap_device_is_configured(self, dap_device):
         dev = dap_device.get('device', None)
         cfg = dap_device.get('cfg_value', None)
@@ -138,33 +138,33 @@ class USBDeviceHandle(USBDeviceInfo):
                 return False
 
         return False
-    
+
     def _config_dap_device(self, dap_device):
         dev = dap_device.get('device', None)
         cfg = dap_device.get('cfg_value', None)
         if dev and cfg is not None:
             try:
                 dev.set_configuration(cfg)
-                
+
                 if self._check_dap_device_is_configured(dap_device):
                     return True
             except Exception:
                 return False
-            
+
         return False
-    
+
     def reset_dap_device(self, dap_device):
         dap_device = self.get_selected_dap_device
         if dap_device is None:
             return False
         dev = dap_device.get('device', None)
-        if dev: 
+        if dev:
             try:
                 dev.reset()
                 return True
             except Exception:
                 return False
-            
+
         return False
 
     def send_data_to_dap_device(self, data, timeout=10):
@@ -174,7 +174,7 @@ class USBDeviceHandle(USBDeviceInfo):
         dev = dap_device.get('device', None)
         if dev is None:
             return False
-        
+
         out_ep = dap_device.get('out_ep', None)
         if out_ep is None:
             return False
@@ -194,7 +194,7 @@ class USBDeviceHandle(USBDeviceInfo):
             return write_len
         except Exception:
             return False
-        
+
     def receive_data_from_dap_device(self, buffer, timeout=10):
         dap_device = self.get_selected_dap_device
         if dap_device is None:
@@ -202,11 +202,11 @@ class USBDeviceHandle(USBDeviceInfo):
         dev = dap_device.get('device', None)
         if dev is None:
             return None
-        
+
         in_ep = dap_device.get('in_ep', None)
         if in_ep is None:
             return None
-        
+
         try:
             read_len = dev.read(in_ep, buffer, timeout=timeout)
             if self._is_hid_device(dap_device):
@@ -214,25 +214,25 @@ class USBDeviceHandle(USBDeviceInfo):
             return read_len
         except Exception:
             return None
-        
+
     def _is_hid_device(self, device):
         if device.get('interface_class', None) == 'HID':
             return True
         return False
-    
+
     def _get_hid_receive_buffer_length(self, buffer):
         """获取HID接收缓冲区的有效长度，即最后一个非零字节的位置+1"""
         return next((i for i in range(len(buffer) - 1, -1, -1) if buffer[i] != 0), -1) + 1
-        
+
     def clean_in_ep(self):
         dap_device = self.get_selected_dap_device
         if dap_device is None:
             return False
         packet_size = dap_device.get('out_ep_packet_size')
+        buffer =usb.util.create_buffer(packet_size)
         while True:
-            buffer =usb.util.create_buffer(packet_size)
             res = self.receive_data_from_dap_device(buffer)
-            if res is None or res == 0: 
+            if res is None or res == 0:
                 break
 
 

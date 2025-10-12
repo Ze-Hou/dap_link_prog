@@ -4,7 +4,7 @@ from PyQt5.QtCore import (
 from PyQt5.QtWidgets import (
     QGraphicsDropShadowEffect
 )
-from dap_link_prog_icon import DAPIcon
+from ui.dap_link_prog_icon import DAPIcon
 
 
 class DAPLinkStyle:
@@ -148,12 +148,6 @@ class DAPLinkStyle:
                 }
                 """
             )
-        """
-            QTextEdit {
-                background-color: #f0f0f0;
-                border: 1px solid #a0a0a0;
-            }
-            """
         @staticmethod
         def get_text_browser_style():
             return (
@@ -351,4 +345,55 @@ class DAPLinkStyle:
                 """
             )
 
+    class ShowInfoPage:
+        @staticmethod
+        def get_text_browser_style():
+            return (
+                """
+                QTextBrowser {
+                    border: 1px solid #a0a0a0;
+                    border-radius: 6px;
+                    background: #f8f8ff;
+                    font: 10pt "consolas";
+                    color: #000000;
+                }
+                QTextBrowser:focus {
+                    outline: none;
+                    border: 1px solid #a0a0a0;
+                }
+                /* 滚动条整体 */
+                QScrollBar:vertical {
+                    background: #f0f0f0;
+                    width: 4px;
+                    margin: 5px 0px 5px 0px;
+                    border-radius: 2px;
+                }
+                /* 滚动条滑块 */
+                QScrollBar::handle:vertical {
+                    background: gainsboro;
+                    min-height: 24px;
+                    border-radius: 2px;
+                }
+                QScrollBar::handle:vertical:hover {
+                    background: #6ec1e4;
+                }
+                /* 上下按钮隐藏 */
+                QScrollBar::sub-line:vertical, QScrollBar::add-line:vertical {
+                    height: 0px;
+                    background: none;
+                    border: none;
+                }
+                /* 滚动条两端空白 */
+                QScrollBar::sub-page:vertical, QScrollBar::add-page:vertical {
+                    background: none;
+                }
+                """
+            )
 
+        @staticmethod
+        def get_text_browser_shadow_effect():
+            shadow = QGraphicsDropShadowEffect()
+            shadow.setBlurRadius(12)
+            shadow.setOffset(2, 2)
+            shadow.setColor(Qt.GlobalColor.gray)
+            return shadow

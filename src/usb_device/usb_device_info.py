@@ -14,7 +14,7 @@ class USBDeviceInfo:
 
     def clean_dap_devices(self):
         self.dap_devices['dap'].clear()
-        
+
     def usb_devices_info_get(self):
         # 查找所有USB设备
         devices = usb.core.find(find_all=True, backend=self.backend)
@@ -22,9 +22,9 @@ class USBDeviceInfo:
         if devices:
             for device in devices:
                 device_list.append(device)
- 
+
         return device_list
-    
+
     def find_dap_devices(self, desc='DAP'):
         desc = desc.lower()
         devices = self.usb_devices_info_get()
@@ -43,7 +43,7 @@ class USBDeviceInfo:
         # self._print_dap_devices_info(self.dap_devices)
         # self.print_dap_devices(self.dap_devices)
         return self.dap_devices
-    
+
     def _save_dap_devices(self, device, desc):
         device_class = {
             'HID': [],
@@ -105,7 +105,7 @@ class USBDeviceInfo:
                 return
 
         return device_class
-    
+
     def _safe_get_string(self, device, index):
         if index == 0:
             return ""

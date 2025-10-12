@@ -11,14 +11,19 @@ from PyQt5.QtWidgets import (
 
 from PyQt5.QtGui import QIcon, QFont, QRegExpValidator
 from PyQt5 import uic
-from dap_link_prog_icon import DAPIcon
-from dap_link_style import DAPLinkStyle
+import sys
+import os
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from component.run_env import RunEnv
+from ui.dap_link_prog_icon import DAPIcon
+from ui.dap_link_style import DAPLinkStyle
 
 
 class InputAddrSizeUIBase(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        uic.loadUi("./src/ui/input_addr_size_page.ui", self)
+        uic.loadUi(RunEnv.parse_path("./src/ui/input_addr_size_page.ui"), self)
         self._init_ui()
         self.init_ui()
 

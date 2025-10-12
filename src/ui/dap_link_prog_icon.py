@@ -1,4 +1,10 @@
 from enum import Enum
+import sys
+import os
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+from component.run_env import RunEnv
 
 class DAPIcon(Enum):
     Download = "ArrowDownload"
@@ -19,4 +25,4 @@ class DAPIcon(Enum):
     ChevronUp = "ChevronUp"
 
     def path(self) -> str:
-        return f"./src/ui/icons/{self.value}.svg"
+        return RunEnv.parse_path(f"./src/ui/icons/{self.value}.svg")

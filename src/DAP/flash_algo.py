@@ -65,7 +65,7 @@ class FlashAlgo(ctypes.LittleEndianStructure):
     ]
 
 
-class PraseElfFile(ELFFile):
+class ParseElfFile(ELFFile):
     def __init__(self, f_path: str, device:str, ram_base_addr = 0, print_info: bool = False):
         self.f_path = f_path
         self.dev = device.lower()
@@ -74,15 +74,15 @@ class PraseElfFile(ELFFile):
         self.data = self._get_elf_data()
         if self.data is None:
             logging.error("Failed to read ELF file.")
-            self.prase_flag = False
+            self.parse_flag = False
             return
         super().__init__(io.BytesIO(self.data))
         self.flash_device = FlashDevice()
         self.flash_algo = FlashAlgo()
         self.algo_blob = None
-        self.prase_flag = self._prase()
+        self.parse_flag = self._parse()
 
-    def _prase(self) -> bool:
+    def _parse(self) -> bool:
         symbols = dict()
         if self._get_elf_symbols(symbols):
             missing = set(self.REQUIRED_SYMBOLS) - set(symbols)
@@ -290,7 +290,7 @@ class PraseElfFile(ELFFile):
             self.f_path = self.f_path.replace('\\', '/')
         path = self.f_path.rsplit('/', 3)
         pdsc_path =  f"{path[0]}/{path[1]}/{path[2]}/{path[1]}.{path[2]}.pdsc"
-        pasc_data = PrasePdscFile.prase_pdsc_file(pdsc_path)
+        pasc_data = ParsePdscFile.parse_pdsc_file(pdsc_path)
 
         ram_addr = 0
 
@@ -330,10 +330,10 @@ class PraseElfFile(ELFFile):
     }
 
 
-class PrasePdscFile:
+class ParsePdscFile:
     @staticmethod
-    def prase_pdsc_file(pdsc_path):
-        return PrasePdscFile()._prase_pdsc_file(pdsc_path)
+    def parse_pdsc_file(pdsc_path):
+        return ParsePdscFile()._parse_pdsc_file(pdsc_path)
 
     @staticmethod
     def get_all_device_info_from_pdsc() -> list:
@@ -342,10 +342,10 @@ class PrasePdscFile:
             logging.error("No pdsc file found in ./packs")
             return []
         all_device = []
-        prase = PrasePdscFile()
+        parse = ParsePdscFile()
         for pdsc in pdsc_path:
             flm_dir = str(Path(pdsc).parent.as_posix())
-            data = prase._prase_pdsc_file(pdsc)
+            data = parse._parse_pdsc_file(pdsc)
             for dev, dev_info in data.items():
                 device_info = {
                     'vendor': dev_info['from_pack']['vendor'],
@@ -360,7 +360,7 @@ class PrasePdscFile:
                 all_device.append(device_info)
         return all_device
 
-    def _prase_pdsc_file(self, pdsc_path):
+    def _parse_pdsc_file(self, pdsc_path):
         """解析pdsc文件，返回设备详细信息字典"""
         tree = ET.parse(pdsc_path)
         root = tree.getroot()

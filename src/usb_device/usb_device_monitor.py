@@ -5,13 +5,14 @@ import win32con
 from PyQt5.QtCore import pyqtSignal, QTimer
 from PyQt5.QtWidgets import QWidget
 from functools import partial
+import logging
 
- 
+
 user32 = ctypes.windll.user32
 RegisterDeviceNotification = user32.RegisterDeviceNotificationW
 UnregisterDeviceNotification = user32.UnregisterDeviceNotification
- 
- 
+
+
 class GUID(ctypes.Structure):
     _pack_ = 1
     _fields_ = [
@@ -20,7 +21,7 @@ class GUID(ctypes.Structure):
         ("Data3", ctypes.c_ushort),
         ("Data4", ctypes.c_ubyte * 8)
     ]
- 
+
 class DEV_BROADCAST_DEVICEINTERFACE(ctypes.Structure):
     _pack_ = 1
     _fields_ = [
@@ -30,15 +31,15 @@ class DEV_BROADCAST_DEVICEINTERFACE(ctypes.Structure):
         ("dbcc_classguid", GUID),
         ("dbcc_name", ctypes.c_wchar * 512)
     ]
- 
- 
+
+
 class DEV_BROADCAST_HDR(ctypes.Structure):
     _fields_ = [
         ("dbch_size", wintypes.DWORD),
         ("dbch_devicetype", wintypes.DWORD),
         ("dbch_reserved", wintypes.DWORD)
     ]
- 
+
 GUID_DEVINTERFACE_USB_DEVICE = \
     GUID(0xA5DCBF10, 0x6530, 0x11D2, (ctypes.c_ubyte * 8)(0x90, 0x1F, 0x00, 0xC0, 0x4F, 0xB9, 0x51, 0xED))
 
@@ -70,16 +71,15 @@ class USBDeviceMonitor(QWidget):
                                                  win32con.DEVICE_NOTIFY_WINDOW_HANDLE)
             self.hNotify.append(hNotify)
             if hNotify == win32con.NULL:
-                print(ctypes.FormatError(), int(self.winId()))
-                print('RegisterDeviceNotification failed')
+                logging.error('RegisterDeviceNotification failed')
 
     def stop(self):
         for h in self.hNotify:
             if h != win32con.NULL:
-                print('UnRegisterDeviceNotification')
+                logging.info('UnRegisterDeviceNotification')
                 UnregisterDeviceNotification(h)
             else:
-                print('the notify handler is NULL')
+                logging.error('the notify handler is NULL')
         self.hNotify.clear()
 
     def nativeEvent(self, eventType, message) -> typing.Tuple[bool, int]:
@@ -100,7 +100,7 @@ class USBDeviceMonitor(QWidget):
                         self.usb_changed_signal.emit() # type: ignore
 
         return super().nativeEvent(eventType, message)
-    
+
     def _set_usb_changed_info(self, type, name: str, dir: bool):
         self.usb_changed_info['flag'] = True
         self.usb_changed_info['type'] = type

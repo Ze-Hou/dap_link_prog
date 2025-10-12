@@ -113,57 +113,44 @@ class DAPHandler:
 
         return True
 
-    def download_algorithm(self, start_addr, algorithm, algorithm_size, verify_flag: bool) -> bool:
+    """
+    >>>
+    target_flash_operation_init: 初始化flash操作，复位并停机目标设备。
+    target_flash_operation_uninit: 结束flash操作，停止DAP设备。
+    注意：这两个函数不包含flash的初始化、擦除、编程和读取操作，这些操作需要调用相应的函数来完成。
+    download_algorithm: 下载算法到目标设备的内存中，并可选择验证下载的数据。
+    注意在操作flash前需使用该函数将算法下载到目标设备的内存中。后续调用这些算法执行flash操作。
+    download_data_to_prog_ram: 下载数据到目标设备的编程内存中，用于传输烧录数据。
+    target_flash_init: 初始化flash操作。
+    target_flash_erase: 擦除flash操作。
+    target_flash_program: 编程flash操作。
+    target_flash_uninit: 结束flash操作。
+    """
+    def target_flash_operation_init(self) -> bool:
         """
         注意使用该函数结束不会停止DAP设备。
+        结束后需要调用target_flash_operation_uninit函数。
         """
         if self._reset_and_halt_target() is False:
-                return False
-        if not algorithm:
             return False
-        algorithm_size = (algorithm_size + 4 -1) // 4
-        use_for_data_size = self.dap_packet_size - 5
-        use_for_data_size = ((use_for_data_size - (use_for_data_size % 4)) & 0xFFFF) // 4
-        if self._set_write_address(start_addr) is False:
-            return False
-        transfer_count = (algorithm_size + use_for_data_size - 1) // use_for_data_size
-        start_index = 0
-        end_index = 0
-        verify_value = self.get_xor_value(algorithm, algorithm_size)
-        buffer = usb.util.create_buffer(self.dap_packet_size)
-        for _ in range(transfer_count//self.dap_packet_count):
-            for _ in range(self.dap_packet_count):
-                end_index = start_index + use_for_data_size
-                if self._dap_transfer_block(0x00, use_for_data_size, 0x0D, algorithm[start_index:end_index]) is False:
-                    return False
-                start_index += use_for_data_size
-            for _ in range(self.dap_packet_count):
-                read_len = self.usb_device_handle.receive_data_from_dap_device(buffer, timeout=100)
-                if read_len is None or read_len == 0:
-                    return False
-                if self._check_dap_transfer_block_response(buffer[1:read_len]) != self.TRANSFER_RESPONSE['OK']:
-                    return False
-        rest_count = transfer_count % self.dap_packet_count
-        for _ in range(rest_count - 1):
-            end_index = start_index + use_for_data_size
-            if self._dap_transfer_block(0x00, use_for_data_size, 0x0D, algorithm[start_index:end_index]) is False:
-                return False
-            start_index += use_for_data_size
-        end_index = start_index + (algorithm_size % use_for_data_size)
-        if self._dap_transfer_block(0x00, algorithm_size % use_for_data_size, 0x0D, algorithm[start_index:end_index]) is False:
-            return False
-        for i in range(transfer_count):
-            read_len = self.usb_device_handle.receive_data_from_dap_device(buffer, timeout=100)
-            if read_len is None or read_len == 0:
-                return False
-            if self._check_dap_transfer_block_response(buffer[1:read_len]) != self.TRANSFER_RESPONSE['OK']:
-                return False
+        return True
 
-        if self._check_dp_ctrl_stat_error() is False:
+    def target_flash_operation_uninit(self) -> bool:
+        """
+        注意使用该函数前需要调用target_flash_operation_init函数。
+        该函数用于结束flash操作。
+        """
+        if self._stop_dap_device() is False:
             return False
+        return True
 
+    def download_algorithm(self, start_addr, algorithm, algorithm_size, verify_flag: bool) -> bool:
+        if self._write_target_memory(start_addr, algorithm_size, algorithm) is False:
+            return False
         if verify_flag:
-            if self._verify_target_data(start_addr, algorithm_size * 4, verify_value) is False:
+            algorithm_size = (algorithm_size + 4 - 1) // 4
+            verify_value = self.get_xor_value(algorithm, algorithm_size)
+            if self.verify_target_data(start_addr, algorithm_size * 4, verify_value) is False:
                 logging.error("download algorithm verify error")
                 return False
 
@@ -172,31 +159,54 @@ class DAPHandler:
 
         return True
 
+    def download_data_to_prog_ram(self, start_addr, data, data_size) -> bool:
+        return self._write_target_memory(start_addr, data_size, data)
+
     def target_flash_init(self, data: ExecuteOperation) -> bool:
         """
         ret: 0: success, other: failed
         """
         ret = self._execute_operation(data)
-        if ret != 0:
+        if ret is False:
+            logging.error("Execute operation(flash init) failed.")
+            return False
+        elif ret != 0:
             logging.error(f"Execute operation(flash init) failed with return code: {ret}")
             return False
         return True
 
     def target_flash_erase(self, data: ExecuteOperation) -> bool:
         ret = self._execute_operation(data)
-        if ret != 0:
+        if ret is False:
+            logging.error("Execute operation(flash erase) failed.")
+            return False
+        elif ret != 0:
             logging.error(f"Execute operation(flash erase) failed with return code: {ret}")
+            return False
+        return True
+
+    def target_flash_program(self, data: ExecuteOperation) -> bool:
+        ret = self._execute_operation(data)
+        if ret is False:
+            logging.error("Execute operation(flash program) failed.")
+            return False
+        elif ret != 0:
+            logging.error(f"Execute operation(flash program) failed with return code: {ret}")
             return False
         return True
 
     def target_flash_uninit(self, data: ExecuteOperation) -> bool:
         ret = self._execute_operation(data)
-        if ret != 0:
+        if ret is False:
+            logging.error("Execute operation(flash uninit) failed.")
+            return False
+        elif ret != 0:
             logging.error(f"Execute operation(flash uninit) failed with return code: {ret}")
             return False
-        if self._stop_dap_device() is False:
-            return False
         return True
+    """
+    <<<
+    """
 
     def read_target_flash(self, start_addr, size, read_data: list) -> bool:
         if self._read_target_id() is False:
@@ -207,64 +217,180 @@ class DAPHandler:
             return False
         return True
 
-    def _verify_target_data(self, start_addr, size, verify_value) -> bool:
+    def verify_target_data(self, start_addr, size, verify_value) -> bool:
         read_data = []
         if self._read_target_memory(start_addr, size, read_data) is False:
             return False
 
         if self.get_xor_value(read_data, len(read_data)) != verify_value:
             return False
-
         return True
 
     def _read_target_memory(self, start_addr, size, read_data: list) -> bool:
         read_data.clear()
+        read_addr = start_addr
         read_size = size
-        size = (size + 4 - 1) // 4
-        use_for_data_size = self.dap_packet_size - 4
-        use_for_data_size = ((use_for_data_size - (use_for_data_size % 4)) & 0xFFFF) // 4
-        if self._set_write_address(start_addr) is False:
+        if read_addr % 4 != 0 or read_size % 4 != 0:
+            logging.error("Read address and size must be 4-byte aligned.")
             return False
-        transfer_count = (size + use_for_data_size - 1) // use_for_data_size
-        buffer = usb.util.create_buffer(self.dap_packet_size)
-        for _ in range(transfer_count//self.dap_packet_count):
-            for _ in range(self.dap_packet_count):
-                if self._dap_transfer_block(0x00, use_for_data_size, 0x0F) is False:
+
+        if read_addr % 0x400 != 0:
+            """
+            如果读取地址不是0x400的整数倍，则先读取到下一个0x400对齐地址的数据
+            """
+            first_read_size = (0x400 - (read_addr % 0x400))
+            first_read_size = min(first_read_size, read_size)
+            if self.__read_target_memory(read_addr, first_read_size, read_data) is False:
+                return False
+            if first_read_size == read_size:
+                return True
+            read_addr += first_read_size
+            read_size -= first_read_size
+        read_count = read_size // 0x400
+        for _ in range(read_count):
+            if self.__read_target_memory(read_addr, 0x400, read_data) is False:
+                return False
+            read_addr += 0x400
+            read_size -= 0x400
+        if read_size:
+            if self.__read_target_memory(read_addr, read_size, read_data) is False:
+                return False
+        return True
+
+    def _write_target_memory(self, start_addr, size, write_data: list) -> bool:
+        write_addr = start_addr
+        write_size = size
+        if write_addr % 4 != 0 or write_size % 4 != 0:
+            logging.error("Write address and size must be 4-byte aligned.")
+            return False
+        if write_addr % 0x400 != 0:
+            """
+            如果写入地址不是0x400的整数倍，则先写入到下一个0x400对齐地址的数据
+            """
+            first_write_size = (0x400 - (write_addr % 0x400))
+            first_write_size = min(first_write_size, write_size)
+            if self.__write_target_memory(write_addr, first_write_size, write_data[0:first_write_size//4]) is False:
+                return False
+            if first_write_size == write_size:
+                return True
+            write_addr += first_write_size
+            write_size -= first_write_size
+            write_data = write_data[first_write_size//4:]
+        write_count = write_size // 0x400
+        for _ in range(write_count):
+            if self.__write_target_memory(write_addr, 0x400, write_data[0:0x400//4]) is False:
+                return False
+            write_addr += 0x400
+            write_size -= 0x400
+            write_data = write_data[0x400//4:]
+        if write_size:
+            if self.__write_target_memory(write_addr, write_size, write_data[0:write_size//4]) is False:
+                return False
+
+        if self._check_dp_ctrl_stat_error() is False:
+            return False
+
+        return True
+
+    def __read_target_memory(self, start_addr, size, read_data: list) -> bool:
+            packet_size = self.dap_packet_size - 4
+            packet_size = ((packet_size - (packet_size % 4)) & 0xFFFF) // 4 # 以4字节为单位
+            size_words = size // 4
+            packet_transfer_count = size_words // packet_size
+            read_buffer = usb.util.create_buffer(self.dap_packet_size)
+            if self._set_rw_address(start_addr) is False:
                     return False
+            for _ in range(packet_transfer_count // self.dap_packet_count):
+                for _ in range(self.dap_packet_count):
+                    if self._dap_transfer_block(0x00, packet_size, 0x0F) is False:
+                        return False
+                for _ in range(self.dap_packet_count):
+                    read_len = self.usb_device_handle.receive_data_from_dap_device(read_buffer, timeout=100)
+                    if read_len is None or read_len == 0:
+                        return False
+                    response = self._check_dap_transfer_block_response(read_buffer[1:read_len])
+                    if response != self.TRANSFER_RESPONSE['OK']:
+                        return False
+                    for index in range(4, read_len, 4):
+                        data32 = self._response_list_to_uint32_t(read_buffer[index:index+4])
+                        read_data.append(data32)
+            rest_packet_transfer_count = packet_transfer_count % self.dap_packet_count
+            if rest_packet_transfer_count:
+                for _ in range(rest_packet_transfer_count):
+                    if self._dap_transfer_block(0x00, packet_size, 0x0F) is False:
+                        return False
+                for _ in range(rest_packet_transfer_count):
+                    read_len = self.usb_device_handle.receive_data_from_dap_device(read_buffer, timeout=100)
+                    if read_len is None or read_len == 0:
+                        return False
+                    response = self._check_dap_transfer_block_response(read_buffer[1:read_len])
+                    if response != self.TRANSFER_RESPONSE['OK']:
+                        return False
+                    for index in range(4, read_len, 4):
+                        data32 = self._response_list_to_uint32_t(read_buffer[index:index+4])
+                        read_data.append(data32)
+            rest_words = size_words % packet_size
+            if rest_words:
+                if self._dap_transfer_block(0x00, rest_words, 0x0F) is False:
+                    return False
+                read_len = self.usb_device_handle.receive_data_from_dap_device(read_buffer, timeout=100)
+                if read_len is None or read_len == 0:
+                    return False
+                response = self._check_dap_transfer_block_response(read_buffer[1:read_len])
+                if response != self.TRANSFER_RESPONSE['OK']:
+                    return False
+                for index in range(4, read_len, 4):
+                    data32 = self._response_list_to_uint32_t(read_buffer[index:index+4])
+                    read_data.append(data32)
+            return True
+
+    def __write_target_memory(self, start_addr, size, write_data: list) -> bool:
+        packet_size = self.dap_packet_size - 5
+        packet_size = ((packet_size - (packet_size % 4)) & 0xFFFF) // 4 # 以4字节为单位
+        size_words = size // 4
+        packet_transfer_count = size_words // packet_size
+        buffer = usb.util.create_buffer(self.dap_packet_size)
+        if self._set_rw_address(start_addr) is False:
+            return False
+        start_index = 0
+        end_index = 0
+        for _ in range(packet_transfer_count // self.dap_packet_count):
+            for _ in range(self.dap_packet_count):
+                end_index = start_index + packet_size
+                if self._dap_transfer_block(0x00, packet_size, 0x0D, write_data[start_index:end_index]) is False:
+                    return False
+                start_index += packet_size
             for _ in range(self.dap_packet_count):
                 read_len = self.usb_device_handle.receive_data_from_dap_device(buffer, timeout=100)
                 if read_len is None or read_len == 0:
                     return False
-                response = self._check_dap_transfer_block_response(buffer[1:read_len])
-                if response != self.TRANSFER_RESPONSE['OK']:
+                if self._check_dap_transfer_block_response(buffer[1:read_len]) != self.TRANSFER_RESPONSE['OK']:
                     return False
-                for i in range(4, read_len, 4):
-                    data32 = self._response_list_to_uint32_t(buffer[i:i+4])
-                    read_data.append(data32)
-        rest_count = transfer_count % self.dap_packet_count
-        for _ in range(rest_count - 1):
-            if self._dap_transfer_block(0x00, use_for_data_size, 0x0F) is False:
+        rest_packet_transfer_count = packet_transfer_count % self.dap_packet_count
+        if rest_packet_transfer_count:
+            for _ in range(rest_packet_transfer_count):
+                end_index = start_index + packet_size
+                if self._dap_transfer_block(0x00, packet_size, 0x0D, write_data[start_index:end_index]) is False:
+                    return False
+                start_index += packet_size
+            for _ in range(rest_packet_transfer_count):
+                read_len = self.usb_device_handle.receive_data_from_dap_device(buffer, timeout=100)
+                if read_len is None or read_len == 0:
+                    return False
+                if self._check_dap_transfer_block_response(buffer[1:read_len]) != self.TRANSFER_RESPONSE['OK']:
+                    return False
+        rest_words = size_words % packet_size
+        if rest_words:
+            if self._dap_transfer_block(0x00, rest_words, 0x0D, write_data[start_index:start_index+rest_words]) is False:
                 return False
-        if self._dap_transfer_block(0x00, size % use_for_data_size, 0x0F) is False:
-            return False
-        for i in range(rest_count):
             read_len = self.usb_device_handle.receive_data_from_dap_device(buffer, timeout=100)
             if read_len is None or read_len == 0:
                 return False
-            response = self._check_dap_transfer_block_response(buffer[1:read_len])
-            if response != self.TRANSFER_RESPONSE['OK']:
+            if self._check_dap_transfer_block_response(buffer[1:read_len]) != self.TRANSFER_RESPONSE['OK']:
                 return False
-            for j in range(4, read_len, 4):
-                data32 = self._response_list_to_uint32_t(buffer[j:j+4])
-                read_data.append(data32)
-
-        if read_size % 4:
-            read_data[-1] &= (0xFFFFFFFF >> ((4 - (read_size % 4)) * 8))
-
         return True
 
-    @staticmethod
-    def get_xor_value(data, length) -> int:
+    def get_xor_value(self, data, length) -> int:
         xor_value = 0
         for i in range(length):
             xor_value ^= data[i]
@@ -557,14 +683,14 @@ class DAPHandler:
 
         return True
 
-    def _set_write_address(self, addr) -> bool:
+    def _set_rw_address(self, addr) -> bool:
         response = []
         if self._dap_transfer(0x00, 0x01, [[0x05, addr]], response) is False:
-            logging.error("Failed to set write address, address: {addr}.")
+            logging.error("Failed to set read/write address, address: {addr}.")
             return False
 
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            logging.error(f"Failed to set write address, response: 0x{response[1]:02X}")
+            logging.error(f"Failed to set read/write address, response: 0x{response[1]:02X}")
             return False
         return True
 

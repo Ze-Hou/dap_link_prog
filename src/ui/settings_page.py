@@ -16,10 +16,16 @@ from PyQt5.QtWidgets import (
 
 from PyQt5.QtGui import QIcon, QRegExpValidator
 from PyQt5 import uic
-from dap_link_prog_icon import DAPIcon
-from dap_link_style import DAPLinkStyle
-from dap_link_handle_thread import DAPLinkHandleThread, DAPLinkSyncData, DAPLinkOperation
 import copy
+import sys
+import os
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from component.run_env import RunEnv
+from ui.dap_link_prog_icon import DAPIcon
+from ui.dap_link_style import DAPLinkStyle
+from ui.dap_link_handle_thread import DAPLinkHandleThread, DAPLinkSyncData, DAPLinkOperation
+
 
 
 class SettingsData:
@@ -61,7 +67,7 @@ class SettingsDialog(QDialog):
             self.settings_data = SettingsData.get_settings_data()
         else:
             self.settings_data = copy.deepcopy(settings_data)
-        uic.loadUi("./src/ui/settings_page.ui", self)
+        uic.loadUi(RunEnv.parse_path("./src/ui/settings_page.ui"), self)
         self._init_ui()
 
     def get_settings_data(self):
@@ -115,8 +121,6 @@ class SettingsDialog(QDialog):
         self.comboBox_1_4.activated[str].connect(self._on_comboBox_1_4_activated)
 
         self._set_page_0_context()
-        self._set_page_1_context()
-
         # 获取可用设备信息
         sync_data = DAPLinkSyncData.get_sync_data()
         sync_data['operation'] = DAPLinkOperation.GetDeviceInfo
@@ -233,6 +237,7 @@ class SettingsDialog(QDialog):
         self.comboBox_1_0.setCompleter(completer)
 
         self._add_item_to_combobox_by_serach(self.settings_data['target']['current_search'])
+        self._set_page_1_context()
 
     def _add_item_to_combobox_by_serach(self, filter: str=""):
         self.comboBox_1_1.clear()
@@ -269,7 +274,6 @@ class SettingsDialog(QDialog):
         self._filter_device_by_family(current_family, filter)
         current_device = self.comboBox_1_3.currentText()
         self._filter_algorithm_by_device(current_device)
-
 
     def _filter_family_by_vendor(self, vendor: str, filter: str=""):
         self.comboBox_1_2.clear()
@@ -331,5 +335,15 @@ class SettingsDialog(QDialog):
         if self.settings_data['target']['search_history']:
             self.comboBox_1_0.addItems(self.settings_data['target']['search_history'])
             self.comboBox_1_0.setCurrentText(self.settings_data['target']['current_search'])
-
+        if self.settings_data['target']['vendor']:
+            self.comboBox_1_1.setCurrentText(self.settings_data['target']['vendor'])
+        self._filter_family_by_vendor(self.comboBox_1_1.currentText())
+        if self.settings_data['target']['family']:
+            self.comboBox_1_2.setCurrentText(self.settings_data['target']['family'])
+        self._filter_device_by_family(self.comboBox_1_2.currentText())
+        if self.settings_data['target']['device']:
+            self.comboBox_1_3.setCurrentText(self.settings_data['target']['device'])
+        self._filter_algorithm_by_device(self.comboBox_1_3.currentText())
+        if self.settings_data['target']['algorithm']:
+            self.comboBox_1_4.setCurrentText(self.settings_data['target']['algorithm'])
 

@@ -11,8 +11,12 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5 import uic
 from enum import Enum
+import sys
+import os
 
-from dap_link_style import DAPLinkStyle
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from component.run_env import RunEnv
+from ui.dap_link_style import DAPLinkStyle
 
 class DataTableFormat(Enum):
     """
@@ -43,7 +47,7 @@ class DataTableUIBase(QDialog):
             'size': 0,
         }
 
-        uic.loadUi("./src/ui/data_table_page.ui", self)
+        uic.loadUi(RunEnv.parse_path("./src/ui/data_table_page.ui"), self)
         self._init_ui()
         self.init_ui()
 
@@ -425,14 +429,3 @@ class FlashDataTableDialog(DataTableUIBase):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Flash Data Table")
-
-
-if __name__ == "__main__":
-    import sys
-    from PyQt5.QtWidgets import QApplication
-
-    QApplication.setAttribute(Qt.ApplicationAttribute.AA_EnableHighDpiScaling)
-    app = QApplication(sys.argv)
-    dig = FlashDataTableDialog()
-    dig.show()
-    sys.exit(app.exec_())
