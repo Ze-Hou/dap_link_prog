@@ -50,7 +50,7 @@ class ShowInfoUIBase(QDialog):
 
 
 class ShowAboutInfoDialog(ShowInfoUIBase):
-    VERSION = "0.1"
+    VERSION = "0.0"
     def init_ui(self):
         self.setWindowTitle("关于")
         """
