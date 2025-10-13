@@ -9,13 +9,8 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtGui import QFont
 from PyQt5 import uic
-import sys
-import os
-
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
-from component.run_env import RunEnv
-from ui.dap_link_style import DAPLinkStyle
+from src.component.run_env import RunEnv
+from src.ui.dap_link_style import DAPLinkStyle
 
 
 class ShowInfoUIBase(QDialog):
@@ -55,6 +50,7 @@ class ShowInfoUIBase(QDialog):
 
 
 class ShowAboutInfoDialog(ShowInfoUIBase):
+    VERSION = "0.1"
     def init_ui(self):
         self.setWindowTitle("关于")
         """
@@ -67,7 +63,7 @@ class ShowAboutInfoDialog(ShowInfoUIBase):
             'tiltle': "Version History:",
             'content': '',
         }
-        about_info['content'] = "V0.0 2025.10.12\n" \
+        about_info['content'] = f"V{self.VERSION} 2025.10.12\n" \
                                 "   初始版本\n" \
                                 "       - 支持基本的daplink编程功能\n" \
                                 "       - 支持WinUSB与HID设备\n" \

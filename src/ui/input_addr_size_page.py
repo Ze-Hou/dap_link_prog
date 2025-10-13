@@ -8,16 +8,11 @@ from PyQt5.QtWidgets import (
     QMessageBox,
     QWhatsThis,
 )
-
 from PyQt5.QtGui import QIcon, QFont, QRegExpValidator
 from PyQt5 import uic
-import sys
-import os
-
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from component.run_env import RunEnv
-from ui.dap_link_prog_icon import DAPIcon
-from ui.dap_link_style import DAPLinkStyle
+from src.component.run_env import RunEnv
+from src.ui.dap_link_prog_icon import DAPIcon
+from src.ui.dap_link_style import DAPLinkStyle
 
 
 class InputAddrSizeUIBase(QDialog):

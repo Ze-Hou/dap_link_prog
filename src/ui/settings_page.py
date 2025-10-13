@@ -17,15 +17,10 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QIcon, QRegExpValidator
 from PyQt5 import uic
 import copy
-import sys
-import os
-
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from component.run_env import RunEnv
-from ui.dap_link_prog_icon import DAPIcon
-from ui.dap_link_style import DAPLinkStyle
-from ui.dap_link_handle_thread import DAPLinkHandleThread, DAPLinkSyncData, DAPLinkOperation
-
+from src.component.run_env import RunEnv
+from src.ui.dap_link_prog_icon import DAPIcon
+from src.ui.dap_link_style import DAPLinkStyle
+from src.ui.dap_link_handle_thread import DAPLinkHandleThread, DAPLinkSyncData, DAPLinkOperation
 
 
 class SettingsData:

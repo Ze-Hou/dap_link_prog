@@ -1,1 +1,1 @@
-# USB相关模块
+# 使src/usb_device目录成为Python包

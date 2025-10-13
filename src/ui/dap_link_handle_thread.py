@@ -1,18 +1,14 @@
 import time
-import sys
-import os
 import copy
 import logging
 import ctypes
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from dap.dap_handle import DAPHandler
-from dap.flash_algo import ParseElfFile, ParsePdscFile
-from dap.cortex_m import ExecuteOperation
-
-from component.hex_bin_tool import HexBinTool
-
 from PyQt5.QtCore import QThread, pyqtSignal
 from enum import Enum
+from src.dap.dap_handle import DAPHandler
+from src.dap.flash_algo import ParseElfFile, ParsePdscFile
+from src.dap.cortex_m import ExecuteOperation
+from src.component.hex_bin_tool import HexBinTool
+
 
 class DAPLinkOperation(Enum):
     RefreshDAP = "RefreshDAP"
@@ -282,6 +278,7 @@ class DAPLinkHandleThread(QThread):
             return False
 
         if settings_data['dap']['verify'] is True:
+            logging.info("start program verify...")
             for i in range(prog_info['count']):
                 prog_addr = prog_info['addr'][i]
                 prog_size = prog_info['size'][i]

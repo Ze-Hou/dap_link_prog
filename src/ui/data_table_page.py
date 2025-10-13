@@ -11,12 +11,8 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5 import uic
 from enum import Enum
-import sys
-import os
-
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from component.run_env import RunEnv
-from ui.dap_link_style import DAPLinkStyle
+from src.component.run_env import RunEnv
+from src.ui.dap_link_style import DAPLinkStyle
 
 class DataTableFormat(Enum):
     """

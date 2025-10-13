@@ -1,6 +1,6 @@
 import usb.core
 import usb.util
-from usb_device.usb_device_info import USBDeviceInfo
+from src.usb_device.usb_device_info import USBDeviceInfo
 import logging
 
 class USBDeviceHandle(USBDeviceInfo):

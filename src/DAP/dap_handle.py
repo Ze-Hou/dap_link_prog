@@ -1,7 +1,7 @@
 import usb.core
 import usb.util
-from usb_device.usb_device_handle import USBDeviceHandle
-from .cortex_m import DEBUG_REG, SCB_REG, ROM_TABLE, ExecuteOperation
+from src.usb_device.usb_device_handle import USBDeviceHandle
+from src.dap.cortex_m import DEBUG_REG, SCB_REG, ROM_TABLE, ExecuteOperation
 import time
 import logging
 

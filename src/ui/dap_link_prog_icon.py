@@ -1,10 +1,6 @@
 from enum import Enum
-import sys
-import os
+from src.component.run_env import RunEnv
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
-from component.run_env import RunEnv
 
 class DAPIcon(Enum):
     Download = "ArrowDownload"

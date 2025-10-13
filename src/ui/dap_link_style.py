@@ -4,7 +4,7 @@ from PyQt5.QtCore import (
 from PyQt5.QtWidgets import (
     QGraphicsDropShadowEffect
 )
-from ui.dap_link_prog_icon import DAPIcon
+from src.ui.dap_link_prog_icon import DAPIcon
 
 
 class DAPLinkStyle:

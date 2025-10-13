@@ -3,9 +3,11 @@ import usb.util
 import usb.backend.libusb1
 from typing import Optional, Dict, Any, Union
 import logging
+from src.component.run_env import RunEnv
+
 
 class USBDeviceInfo:
-    def __init__(self, libusb_backend="./libusb-1.0.29/MinGW64/dll/libusb-1.0.dll"):
+    def __init__(self, libusb_backend=RunEnv.parse_path("./libusb-1.0.29/MinGW64/dll/libusb-1.0.dll")):
         self.backend = usb.backend.libusb1.get_backend(find_library=lambda x: libusb_backend)
         # 定义一个空字典保存DAP设备信息
         self.dap_devices = {

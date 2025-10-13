@@ -5,6 +5,7 @@ from collections import namedtuple
 import xml.etree.ElementTree as ET
 import logging
 from pathlib import Path
+from src.component.run_env import RunEnv
 
 
 class FlashDefine:
@@ -337,7 +338,7 @@ class ParsePdscFile:
 
     @staticmethod
     def get_all_device_info_from_pdsc() -> list:
-        pdsc_path =  list(Path("./packs").rglob("*.pdsc"))
+        pdsc_path =  list(Path(RunEnv.parse_path("./packs")).rglob("*.pdsc"))
         if not pdsc_path:
             logging.error("No pdsc file found in ./packs")
             return []
@@ -355,7 +356,7 @@ class ParsePdscFile:
                 }
                 for algo in dev_info['algorithms']:
                     flm = Path(algo['file_name']).name
-                    flm_path = f"./{flm_dir}/{flm}"
+                    flm_path = f"{flm_dir}/{flm}"
                     device_info['algorithm'].append((flm, flm_path))
                 all_device.append(device_info)
         return all_device

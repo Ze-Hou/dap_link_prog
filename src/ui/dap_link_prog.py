@@ -1,4 +1,3 @@
-import sys
 import os
 import logging
 from PyQt5.QtCore import (
@@ -22,17 +21,15 @@ from PyQt5.QtGui import QIcon, QFont, QFontDatabase
 from PyQt5 import uic
 from functools import partial
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
-from component.run_env import RunEnv
-from ui.dap_link_prog_icon import DAPIcon
-from ui.dap_link_style import DAPLinkStyle
-from ui.input_addr_size_page import EraseDialog, ReadFlashDialog
-from ui.settings_page import SettingsDialog, SettingsData
-from ui.data_table_page import FlashDataTableDialog
-from ui.show_info_page import ShowAboutInfoDialog
-from ui.dap_link_handle_thread import DAPLinkHandleThread, DAPLinkOperation, DAPLinkSyncData
-from usb_device.usb_device_monitor import USBDeviceMonitor
+from src.component.run_env import RunEnv
+from src.ui.dap_link_prog_icon import DAPIcon
+from src.ui.dap_link_style import DAPLinkStyle
+from src.ui.input_addr_size_page import EraseDialog, ReadFlashDialog
+from src.ui.settings_page import SettingsDialog, SettingsData
+from src.ui.data_table_page import FlashDataTableDialog
+from src.ui.show_info_page import ShowAboutInfoDialog
+from src.ui.dap_link_handle_thread import DAPLinkHandleThread, DAPLinkOperation, DAPLinkSyncData
+from src.usb_device.usb_device_monitor import USBDeviceMonitor
 
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -252,7 +249,6 @@ class DAPLinkProgUI(QMainWindow):
                 return
 
     def _about(self):
-        print("about")
         about = ShowAboutInfoDialog(self)
         about.exec_()
 
