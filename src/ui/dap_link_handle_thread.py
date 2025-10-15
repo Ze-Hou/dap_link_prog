@@ -398,7 +398,7 @@ class DAPLinkHandleThread(QThread):
                                 start_location = i
                                 break
                     erase_start_addr = erase_addr - (erase_addr % self.parse.flash_device.sectors[start_location].szSector)
-                    offset = erase_end_addr - self.parse.flash_device.DevAdr
+                    offset = erase_start_addr - self.parse.flash_device.DevAdr
                     rest_erase = erase_end_addr - erase_start_addr
                     while rest_erase > 0:
                         sector_size = self.parse.flash_device.sectors[start_location].szSector
@@ -407,8 +407,11 @@ class DAPLinkHandleThread(QThread):
                                 sector_num = (self.parse.flash_device.sectors[start_location + 1].AddrSector - offset + sector_size - 1) // sector_size
                                 if self._erase_target_erase_sector(sync_data, erase_start_addr, sector_num, sector_size) is False:
                                     return False
-                                erase_start_addr += sector_size * sector_num
-                                rest_erase -= sector_size * sector_num
+                                erase_add_size = sector_size * sector_num
+                                erase_start_addr += erase_add_size
+                                offset += erase_add_size
+                                rest_erase -= erase_add_size
+                                start_location += 1
                             else:
                                 sector_num = (rest_erase + sector_size - 1) // sector_size
                                 if self._erase_target_erase_sector(sync_data, erase_start_addr, sector_num, sector_size) is False:
