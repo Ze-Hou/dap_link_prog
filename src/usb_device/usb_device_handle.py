@@ -209,8 +209,6 @@ class USBDeviceHandle(USBDeviceInfo):
 
         try:
             read_len = dev.read(in_ep, buffer, timeout=timeout)
-            if self._is_hid_device(dap_device):
-                read_len = self._get_hid_receive_buffer_length(buffer)
             return read_len
         except Exception:
             return None
@@ -219,10 +217,6 @@ class USBDeviceHandle(USBDeviceInfo):
         if device.get('interface_class', None) == 'HID':
             return True
         return False
-
-    def _get_hid_receive_buffer_length(self, buffer):
-        """获取HID接收缓冲区的有效长度，即最后一个非零字节的位置+1"""
-        return next((i for i in range(len(buffer) - 1, -1, -1) if buffer[i] != 0), -1) + 1
 
     def clean_in_ep(self):
         dap_device = self.get_selected_dap_device
@@ -234,5 +228,3 @@ class USBDeviceHandle(USBDeviceInfo):
             res = self.receive_data_from_dap_device(buffer)
             if res is None or res == 0:
                 break
-
-

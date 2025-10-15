@@ -77,9 +77,6 @@ class DAPHandler:
         return True
 
     def reset_target(self, reset_mode='software') -> bool:
-        if self._read_target_id() is False:
-            return False
-
         if reset_mode not in ['hardware', 'software']:
             logging.error("Invalid reset mode. Use 'hardware' or 'software'.")
             return False
@@ -97,6 +94,8 @@ class DAPHandler:
 
             time.sleep(0.05)  # 等待复位完成
         else:
+            if self._read_target_id() is False:
+                return False
             retry_count = 10
             while True:
                 self._set_dap_swj_pin(0x00, 0x80, 0x00000000)
@@ -302,10 +301,10 @@ class DAPHandler:
                     return False
             for _ in range(packet_transfer_count // self.dap_packet_count):
                 for _ in range(self.dap_packet_count):
-                    if self._dap_transfer_block(0x00, packet_size, 0x0F) is False:
+                    if self._dap_transfer_block_write(0x00, packet_size, 0x0F) is False:
                         return False
                 for _ in range(self.dap_packet_count):
-                    read_len = self.usb_device_handle.receive_data_from_dap_device(read_buffer, timeout=100)
+                    read_len = self._dap_transfer_block_read(read_buffer)
                     if read_len is None or read_len == 0:
                         return False
                     response = self._check_dap_transfer_block_response(read_buffer[1:read_len])
@@ -317,10 +316,10 @@ class DAPHandler:
             rest_packet_transfer_count = packet_transfer_count % self.dap_packet_count
             if rest_packet_transfer_count:
                 for _ in range(rest_packet_transfer_count):
-                    if self._dap_transfer_block(0x00, packet_size, 0x0F) is False:
+                    if self._dap_transfer_block_write(0x00, packet_size, 0x0F) is False:
                         return False
                 for _ in range(rest_packet_transfer_count):
-                    read_len = self.usb_device_handle.receive_data_from_dap_device(read_buffer, timeout=100)
+                    read_len = self._dap_transfer_block_read(read_buffer)
                     if read_len is None or read_len == 0:
                         return False
                     response = self._check_dap_transfer_block_response(read_buffer[1:read_len])
@@ -331,9 +330,9 @@ class DAPHandler:
                         read_data.append(data32)
             rest_words = size_words % packet_size
             if rest_words:
-                if self._dap_transfer_block(0x00, rest_words, 0x0F) is False:
+                if self._dap_transfer_block_write(0x00, rest_words, 0x0F) is False:
                     return False
-                read_len = self.usb_device_handle.receive_data_from_dap_device(read_buffer, timeout=100)
+                read_len = self._dap_transfer_block_read(read_buffer)
                 if read_len is None or read_len == 0:
                     return False
                 response = self._check_dap_transfer_block_response(read_buffer[1:read_len])
@@ -357,11 +356,11 @@ class DAPHandler:
         for _ in range(packet_transfer_count // self.dap_packet_count):
             for _ in range(self.dap_packet_count):
                 end_index = start_index + packet_size
-                if self._dap_transfer_block(0x00, packet_size, 0x0D, write_data[start_index:end_index]) is False:
+                if self._dap_transfer_block_write(0x00, packet_size, 0x0D, write_data[start_index:end_index]) is False:
                     return False
                 start_index += packet_size
             for _ in range(self.dap_packet_count):
-                read_len = self.usb_device_handle.receive_data_from_dap_device(buffer, timeout=100)
+                read_len = self._dap_transfer_block_read(buffer)
                 if read_len is None or read_len == 0:
                     return False
                 if self._check_dap_transfer_block_response(buffer[1:read_len]) != self.TRANSFER_RESPONSE['OK']:
@@ -370,20 +369,20 @@ class DAPHandler:
         if rest_packet_transfer_count:
             for _ in range(rest_packet_transfer_count):
                 end_index = start_index + packet_size
-                if self._dap_transfer_block(0x00, packet_size, 0x0D, write_data[start_index:end_index]) is False:
+                if self._dap_transfer_block_write(0x00, packet_size, 0x0D, write_data[start_index:end_index]) is False:
                     return False
                 start_index += packet_size
             for _ in range(rest_packet_transfer_count):
-                read_len = self.usb_device_handle.receive_data_from_dap_device(buffer, timeout=100)
+                read_len = self._dap_transfer_block_read(buffer)
                 if read_len is None or read_len == 0:
                     return False
                 if self._check_dap_transfer_block_response(buffer[1:read_len]) != self.TRANSFER_RESPONSE['OK']:
                     return False
         rest_words = size_words % packet_size
         if rest_words:
-            if self._dap_transfer_block(0x00, rest_words, 0x0D, write_data[start_index:start_index+rest_words]) is False:
+            if self._dap_transfer_block_write(0x00, rest_words, 0x0D, write_data[start_index:start_index+rest_words]) is False:
                 return False
-            read_len = self.usb_device_handle.receive_data_from_dap_device(buffer, timeout=100)
+            read_len = self._dap_transfer_block_read(buffer)
             if read_len is None or read_len == 0:
                 return False
             if self._check_dap_transfer_block_response(buffer[1:read_len]) != self.TRANSFER_RESPONSE['OK']:
@@ -439,13 +438,19 @@ class DAPHandler:
             return False
         if self._write_reg(DEBUG_REG.DEMCR, 0x00000001) is False:  # 发生内核复位时停机调试
             return False
+        retry_count = 10
         while True:
+            retry_count -= 1
+            if retry_count <= 0:
+                logging.error("Reset and halt target failed.")
+                return False
             scb_aircr = self._read_reg(scb_reg.AIRCR)  # 读出AIRCR寄存器
             self._write_reg(scb_reg.AIRCR, ((0x05FA << 16) | \
                                             (scb_aircr & (0x7 << 8)) | \
                                             (0x1 << 2)))  # 软件复位
 
             time.sleep(0.05)  # 等待复位完成
+            self._read_debug_id()
             debug_dhcsr = self._read_reg(DEBUG_REG.DHCSR)  # 读出DHCSR寄存器，确保复位后停机
             if (debug_dhcsr & 0x02030000) != 0:
                 debug_dhcsr = self._read_reg(DEBUG_REG.DHCSR)
@@ -453,6 +458,7 @@ class DAPHandler:
         return True
 
     def _steup_swj_sequence(self, swj_clock=5000000) -> bool:
+        self._get_dap_vid_pid()
         self._get_dap_firmware_version()
         if self.firmware_version == 'Unknown':
             logging.error("Failed to get DAP firmware version.")
@@ -545,7 +551,7 @@ class DAPHandler:
                 return False
 
         self.debug_id = 'Unknown'
-        debug_id = self._response_list_to_uint32_t(response[2:])
+        debug_id = self._response_list_to_uint32_t(response[3:7])
         self.debug_id = f"0x{debug_id:08X}"
         return True
 
@@ -566,11 +572,11 @@ class DAPHandler:
     def _write_dp_abort(self, value) -> bool:
         response = []
         if self._dap_transfer(0x00, 0x01, [[0x00, value]], response) is False:
-            logging.error("Failed to write DP ABORT register, value: {value}.")
+            logging.error(f"Failed to write DP ABORT register, value: {value}.")
             return False
 
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            logging.error(f"Failed to write DP ABORT register, response: 0x{response[1]:02X}")
+            logging.error(f"Failed to write DP ABORT register, response: 0x{response[2]:02X}")
             return False
         return True
 
@@ -581,19 +587,19 @@ class DAPHandler:
             return False
 
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            logging.error(f"Failed to read DP ABORT register, response: 0x{response[1]:02X}")
+            logging.error(f"Failed to read DP ABORT register, response: 0x{response[2]:02X}")
             return False
 
-        return self._response_list_to_uint32_t(response[2:])
+        return self._response_list_to_uint32_t(response[3:7])
 
     def _write_dp_ctrl_stat(self, value) -> bool:
         response = []
         if self._dap_transfer(0x00, 0x01, [[0x04, value]], response) is False:
-            logging.error("Failed to write DP  CTRL STAT register, value: {value}.")
+            logging.error(f"Failed to write DP  CTRL STAT register, value: {value}.")
             return False
 
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            logging.error(f"Failed to write DP  CTRL STAT register, response: 0x{response[1]:02X}")
+            logging.error(f"Failed to write DP  CTRL STAT register, response: 0x{response[2]:02X}")
             return False
 
         return True
@@ -605,10 +611,10 @@ class DAPHandler:
             return False
 
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            logging.error(f"Failed to read DP CTRL STAT register, response: 0x{response[1]:02X}")
+            logging.error(f"Failed to read DP CTRL STAT register, response: 0x{response[2]:02X}")
             return False
 
-        return self._response_list_to_uint32_t(response[2:])
+        return self._response_list_to_uint32_t(response[3:7])
 
     def _check_dp_ctrl_stat_error(self):
         dp_status = self._read_dp_ctrl_stat()
@@ -620,11 +626,11 @@ class DAPHandler:
     def _write_ap_csw(self, value) -> bool:
         response = []
         if self._dap_transfer(0x00, 0x01, [[0x01, value]], response) is False:
-            logging.error("Failed to write AP CSW register, value: {value}.")
+            logging.error(f"Failed to write AP CSW register, value: {value}.")
             return False
 
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            logging.error(f"Failed to write AP CSW register, response: 0x{response[1]:02X}")
+            logging.error(f"Failed to write AP CSW register, response: 0x{response[2]:02X}")
             return False
 
         return True
@@ -636,10 +642,10 @@ class DAPHandler:
             return False
 
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            logging.error(f"Failed to read AP CSW register, response: 0x{response[1]:02X}")
+            logging.error(f"Failed to read AP CSW register, response: 0x{response[2]:02X}")
             return False
 
-        return self._response_list_to_uint32_t(response[2:])
+        return self._response_list_to_uint32_t(response[3:7])
 
     def _read_ap_idr(self):
         self._write_dp_select(0x000000F0)
@@ -649,12 +655,12 @@ class DAPHandler:
             return False
 
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            logging.error(f"Failed to read AP IDR register, response: 0x{response[1]:02X}")
+            logging.error(f"Failed to read AP IDR register, response: 0x{response[2]:02X}")
             return False
 
         self._write_dp_select(0x00000000)
 
-        return self._response_list_to_uint32_t(response[2:])
+        return self._response_list_to_uint32_t(response[3:7])
 
     def _read_debug_interface_base_addr(self):
         self._write_dp_select(0x000000F0)
@@ -664,21 +670,21 @@ class DAPHandler:
             return False
 
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            logging.error(f"Failed to read Debug Interface Base Address, response: 0x{response[1]:02X}")
+            logging.error(f"Failed to read Debug Interface Base Address, response: 0x{response[2]:02X}")
             return False
 
         self._write_dp_select(0x00000000)
 
-        return self._response_list_to_uint32_t(response[2:])
+        return self._response_list_to_uint32_t(response[3:7])
 
     def _write_dp_select(self, value) -> bool:
         response = []
         if self._dap_transfer(0x00, 0x01, [[0x08, value]], response) is False:
-            logging.error("Failed to write DP select register, value: {value}.")
+            logging.error(f"Failed to write DP select register, value: {value}.")
             return False
 
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            logging.error(f"Failed to set DP select register, response: 0x{response[1]:02X}")
+            logging.error(f"Failed to set DP select register, response: 0x{response[2]:02X}")
             return False
 
         return True
@@ -686,12 +692,15 @@ class DAPHandler:
     def _set_rw_address(self, addr) -> bool:
         response = []
         if self._dap_transfer(0x00, 0x01, [[0x05, addr]], response) is False:
-            logging.error("Failed to set read/write address, address: {addr}.")
+            logging.error(f"Failed to set read/write address, address: 0x{addr:08X}.")
             return False
 
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            logging.error(f"Failed to set read/write address, response: 0x{response[1]:02X}")
-            return False
+            if self._check_dap_transfer_response(response) == self.TRANSFER_RESPONSE['NO_ACK']:
+                logging.warning("Set read/write address no ack")
+            else:
+                logging.error(f"Failed to set read/write address, response: 0x{response[2]:02X}")
+                return False
         return True
 
     def _write_reg(self, reg_address, value) -> bool:
@@ -703,12 +712,15 @@ class DAPHandler:
         """
         response = []
         if self._dap_transfer(0x00, 0x02, [[0x05, reg_address], [0x0d, value]], response) is False:
-            logging.error("Failed to write register, address: {reg_address}, value: {value}.")
+            logging.error(f"Failed to write register, address: 0x{reg_address:08X}, value: {value}.")
             return False
 
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            logging.error(f"Failed to write register, response: 0x{response[1]:02X}")
-            return False
+            if self._check_dap_transfer_response(response) == self.TRANSFER_RESPONSE['NO_ACK']:
+                logging.warning("Write register no ack")
+            else:
+                logging.error(f"Failed to write register, response: 0x{response[2]:02X}")
+                return False
 
         return True
 
@@ -720,14 +732,17 @@ class DAPHandler:
         """
         response = []
         if self._dap_transfer(0x00, 0x02, [[0x05, reg_address], [0x0F, []]], response) is False:
-            logging.error("Failed to read register, address: {reg_address}.")
+            logging.error(f"Failed to read register, address: 0x{reg_address:08X}.")
             return False
 
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            logging.error(f"Failed to read register, response: 0x{response[1]:02X}")
-            return False
+            if self._check_dap_transfer_response(response) == self.TRANSFER_RESPONSE['NO_ACK']:
+                logging.warning("Read register no ack")
+            else:
+                logging.error(f"Failed to read register, response: 0x{response[2]:02X}")
+                return False
 
-        return self._response_list_to_uint32_t(response[2:])
+        return self._response_list_to_uint32_t(response[3:7])
 
     def _response_list_to_uint32_t(self, response):
         """
@@ -770,7 +785,7 @@ class DAPHandler:
             return False
 
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            logging.error(f"Failed to write excute operation, response: 0x{response[1]:02X}")
+            logging.error(f"Failed to write excute operation, response: 0x{response[2]:02X}")
             return False
         # 然后写R9, R13, R14, R15寄存器
         response.clear()
@@ -793,7 +808,7 @@ class DAPHandler:
             return False
 
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            logging.error(f"Failed to write excute operation, response: 0x{response[1]:02X}")
+            logging.error(f"Failed to write excute operation, response: 0x{response[2]:02X}")
             return False
         # 最后写xpsr, DHCSR寄存器，并读取DP端口的DP-CTRL/STAT寄存器
         response.clear()
@@ -809,9 +824,9 @@ class DAPHandler:
             return False
 
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            logging.error(f"Failed to write excute operation, response: 0x{response[1]:02X}")
+            logging.error(f"Failed to write excute operation, response: 0x{response[2]:02X}")
             return False
-        dp_status = self._response_list_to_uint32_t(response[2:])
+        dp_status = self._response_list_to_uint32_t(response[3:7])
         if (dp_status & 0x00000080) != 0 or (dp_status & 0x00000040) == 0:
             logging.error(f"DP status read/write error(code: 0x{dp_status:08X})")
             return False
@@ -823,6 +838,8 @@ class DAPHandler:
                 logging.error("Execute operation timeout.")
                 return False
             dhcsr_value = self._read_reg(DEBUG_REG.DHCSR)
+            if dhcsr_value is False:
+                return False
             if (dhcsr_value & 0x00030000) == 0x00030000:
                 break
             time.sleep(0.01)
@@ -840,10 +857,10 @@ class DAPHandler:
             return False
 
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            logging.error(f"Failed to write excute operation, response: 0x{response[1]:02X}")
+            logging.error(f"Failed to write excute operation, response: 0x{response[2]:02X}")
             return False
 
-        dp_status = self._response_list_to_uint32_t(response[6:])
+        dp_status = self._response_list_to_uint32_t(response[7:11])
         if (dp_status & 0x00000080) != 0 or (dp_status & 0x00000040) == 0:
             logging.error(f"DP status read/write error(code: 0x{dp_status:08X})")
             return False
@@ -855,11 +872,13 @@ class DAPHandler:
                 logging.error("Execute operation timeout.")
                 return False
             dhcsr_value = self._read_reg(DEBUG_REG.DHCSR)
-            if (dhcsr_value & 0x00030000) == 0x00030000:
+            if dhcsr_value is False:
+                return False
+            elif (dhcsr_value & 0x00030000) == 0x00030000:
                 break
             time.sleep(0.001)
 
-        ret = self._response_list_to_uint32_t(response[2:6])
+        ret = self._response_list_to_uint32_t(response[3:7])
         return ret
 
     def _execute_operation_init(self):
@@ -875,7 +894,7 @@ class DAPHandler:
             return False
 
         if self._check_dap_transfer_response(response) != self.TRANSFER_RESPONSE['OK']:
-            logging.error(f"Failed to read register, response: 0x{response[1]:02X}")
+            logging.error(f"Failed to read register, response: 0x{response[2]:02X}")
             return False
 
     """
@@ -1522,6 +1541,15 @@ class DAPHandler:
 
         return command
 
+    def _get_dap_vid_pid(self):
+        buffer = usb.util.create_buffer(512)
+        self.usb_device_handle.send_data_to_dap_device(self.INFO_COMMANDS['vid'], timeout=100)
+        self.usb_device_handle.receive_data_from_dap_device(buffer, timeout=100)
+        self.usb_device_handle.send_data_to_dap_device(self.INFO_COMMANDS['pid'], timeout=100)
+        self.usb_device_handle.receive_data_from_dap_device(buffer, timeout=100)
+        self.usb_device_handle.send_data_to_dap_device(self.INFO_COMMANDS['sn'], timeout=100)
+        self.usb_device_handle.receive_data_from_dap_device(buffer, timeout=100)
+
     def _get_dap_firmware_version(self):
         write_len = self.usb_device_handle.send_data_to_dap_device(self.INFO_COMMANDS['version'], timeout=100)
         if write_len != len(self.INFO_COMMANDS['version']):
@@ -1533,9 +1561,9 @@ class DAPHandler:
             return False
         self.firmware_version = 'Unknown'
         if buffer[1]:
-            firmware_version = ''.join(chr(c) for c in buffer[2:read_len-1])
+            firmware_version = ''.join(chr(c) for c in buffer[2:buffer[1]])
             self.firmware_version = firmware_version
-        return firmware_version
+        return self.firmware_version
 
     def _get_dap_capabilities(self):
         write_len = self.usb_device_handle.send_data_to_dap_device(self.INFO_COMMANDS['caps'], timeout=100)
@@ -1845,11 +1873,11 @@ class DAPHandler:
 
         # 清空并填充响应数据
         response.clear()
-        response.extend(buffer[1:read_len])
+        response.extend(buffer[:])
 
         return True
 
-    def _dap_transfer_block(self, dap_index, transfer_count, transfer_request, transfer_data=None) -> bool:
+    def _dap_transfer_block_write(self, dap_index, transfer_count, transfer_request, transfer_data=None) -> bool:
         """
         执行DAP块传输
         :param dap_index: JTAG设备的索引（SWD模式忽略）
@@ -1864,8 +1892,17 @@ class DAPHandler:
 
         return True
 
+    def _dap_transfer_block_read(self, buffer) -> int:
+        read_len = self.usb_device_handle.receive_data_from_dap_device(buffer, timeout=100)
+        if read_len is None or read_len < 3:
+            return 0
+        read_len = (buffer[1] | buffer[2] << 8) * 4 + 3
+        return read_len
+
     def _check_dap_transfer_response(self, response):
-        temp = response[1] & 0x07
+        if response[0] != 0x05:
+            return self.TRANSFER_RESPONSE['ERROR']
+        temp = response[2] & 0x07
 
         match temp:
             case 1:
@@ -1878,9 +1915,9 @@ class DAPHandler:
                 return self.TRANSFER_RESPONSE['NO_ACK']
 
         # 检查其他位
-        if response[1] & 0x08:
+        if response[2] & 0x08:
             return self.TRANSFER_RESPONSE['ERROR']
-        if response[1] & 0x10:
+        if response[2] & 0x10:
             return self.TRANSFER_RESPONSE['Mismatch']
 
     def _check_dap_transfer_block_response(self, response):

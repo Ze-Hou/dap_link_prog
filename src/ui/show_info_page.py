@@ -50,7 +50,7 @@ class ShowInfoUIBase(QDialog):
 
 
 class ShowAboutInfoDialog(ShowInfoUIBase):
-    VERSION = "0.0"
+    VERSION = "0.1"
     def init_ui(self):
         self.setWindowTitle("关于")
         """
@@ -63,11 +63,15 @@ class ShowAboutInfoDialog(ShowInfoUIBase):
             'tiltle': "Version History:",
             'content': '',
         }
-        about_info['content'] = f"V{self.VERSION} 2025.10.12\n" \
+        about_info['content'] = f"V{self.VERSION} 2025.10.15\n" \
+                                "   - 修复HID设备\n" \
+                                "   - 优化相关功能\n" \
+                                "V0.0 2025.10.12\n" \
                                 "   初始版本\n" \
                                 "       - 支持基本的daplink编程功能\n" \
                                 "       - 支持WinUSB与HID设备\n" \
                                 "       - 支持hex bin文件烧录\n"
+
         self.add_info(about_info['author'], Qt.GlobalColor.darkGreen, bold=True)
         self.add_info(about_info['email'], Qt.GlobalColor.darkGreen, bold=True)
         self.add_info(about_info['license'], Qt.GlobalColor.darkGreen, bold=True)

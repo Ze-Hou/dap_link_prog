@@ -4,10 +4,10 @@ import logging
 import ctypes
 from PyQt5.QtCore import QThread, pyqtSignal
 from enum import Enum
+from src.component.hex_bin_tool import HexBinTool
 from src.dap.dap_handle import DAPHandler
 from src.dap.flash_algo import ParseElfFile, ParsePdscFile
 from src.dap.cortex_m import ExecuteOperation
-from src.component.hex_bin_tool import HexBinTool
 
 
 class DAPLinkOperation(Enum):
@@ -23,6 +23,7 @@ class DAPLinkOperation(Enum):
     GetDeviceInfo = "GetDeviceInfo"
     DownloadAlgorithm = "DownloadAlgorithm"
     SelectProgFile = "SelectProgFile"
+    SettingsData = "SettingsData"
 
 
 class DAPLinkSyncData:
@@ -56,6 +57,7 @@ class DAPLinkHandleThread(QThread):
             'device': '',
             'path': '',
         }
+        self.settingsdata = dict()
 
     def run(self):
         time_out = 0
@@ -99,6 +101,10 @@ class DAPLinkHandleThread(QThread):
 
             case DAPLinkOperation.SelectProgFile:
                 res = self._select_prog_file()
+
+            case DAPLinkOperation.SettingsData:
+                res = self._settings_data()
+
         if not res:
             logging.error(f"DAPLinkHandleThread operation {operation} failed.")
         else:
@@ -153,25 +159,22 @@ class DAPLinkHandleThread(QThread):
         sync_data = DAPLinkSyncData.get_sync_data()
         sync_data['operation'] = DAPLinkOperation.Reset
         sync_data['status'] = False
-        data = self.sync_data.get('data', [])
-        settings_data = data[1]
-        if self._reset(copy.deepcopy(sync_data), settings_data) is False:
+        if self._reset(copy.deepcopy(sync_data)) is False:
             logging.error("Reset target error.")
             return False
         return True
 
     def _erase_target(self) -> bool:
-        data = self.sync_data.get('data', [])
-        settings_data = data[2]
         sync_data = DAPLinkSyncData.get_sync_data()
         sync_data['operation'] = DAPLinkOperation.Erase
         sync_data['status'] = False
         if self.dap_handle.target_flash_operation_init() is False:
             return False
-        if self._download_algorithm(copy.deepcopy(sync_data), settings_data) is False:
+        if self._download_algorithm(copy.deepcopy(sync_data)) is False:
             return False
         if self._init(copy.deepcopy(sync_data), 1) is False:
             return False
+        data = self.sync_data.get('data', [])
         erase_data = data[1]
         if erase_data[0] < self.parse.flash_device.DevAdr or \
                 erase_data[0] >= (self.parse.flash_device.DevAdr + self.parse.flash_device.szDev):
@@ -193,8 +196,6 @@ class DAPLinkHandleThread(QThread):
             or self.prog_file['type'] not in ['bin', 'hex']:
             logging.error("no program file selected or file type error.")
             return False
-        data = self.sync_data.get('data', [])
-        settings_data = data[1]
         sync_data = DAPLinkSyncData.get_sync_data()
         sync_data['operation'] = DAPLinkOperation.Program
         sync_data['status'] = False
@@ -217,7 +218,7 @@ class DAPLinkHandleThread(QThread):
         start_time = time.time()
         if self.dap_handle.target_flash_operation_init() is False:
             return False
-        if self._download_algorithm(copy.deepcopy(sync_data), settings_data) is False:
+        if self._download_algorithm(copy.deepcopy(sync_data)) is False:
             return False
 
         if prog_info['type'] == 'bin':
@@ -227,7 +228,7 @@ class DAPLinkHandleThread(QThread):
             prog_info['addr'][0] = self.parse.flash_device.DevAdr
             logging.info(f"set bin file program start address to 0x{prog_info['addr'][0]:08X}")
 
-        if settings_data['dap']['erase'] == "不擦除":
+        if self.settingsdata['dap']['erase'] == "不擦除":
             # 检查目标下载区域是否存在非0xFF数据
             if self._check_select_dap():
                 if self.dap_handle.config_dap_device():
@@ -245,16 +246,16 @@ class DAPLinkHandleThread(QThread):
                             return False
                     self.dap_handle.unconfig_dap_device()
 
-        elif settings_data['dap']['erase'] in ["扇区擦除", "全片擦除"]:
+        elif self.settingsdata['dap']['erase'] in ["扇区擦除", "全片擦除"]:
             if self._init(copy.deepcopy(sync_data), 1) is False:
                 return False
-            if settings_data['dap']['erase'] == "扇区擦除":
+            if self.settingsdata['dap']['erase'] == "扇区擦除":
                 for i in range(prog_info['count']):
                     prog_addr = prog_info['addr'][i]
                     prog_size = prog_info['size'][i]
                     if self._erase_target_erase_auto(copy.deepcopy(sync_data), prog_info['addr'][0], prog_info['size'][0]) is False:
                         return False
-            elif settings_data['dap']['erase'] == "全片擦除":
+            elif self.settingsdata['dap']['erase'] == "全片擦除":
                 if self._erase_target_erase_chip(copy.deepcopy(sync_data)) is False:
                     return False
             if self._uninit(copy.deepcopy(sync_data), 1) is False:
@@ -277,7 +278,7 @@ class DAPLinkHandleThread(QThread):
         if self._uninit(copy.deepcopy(sync_data), 2) is False:
             return False
 
-        if settings_data['dap']['verify'] is True:
+        if self.settingsdata['dap']['verify'] is True:
             logging.info("start program verify...")
             for i in range(prog_info['count']):
                 prog_addr = prog_info['addr'][i]
@@ -298,8 +299,8 @@ class DAPLinkHandleThread(QThread):
         if self.dap_handle.target_flash_operation_uninit() is False:
             return False
 
-        if settings_data['dap']['run'] is True:
-            if self._reset(copy.deepcopy(sync_data), settings_data) is False:
+        if self.settingsdata['dap']['run'] is True:
+            if self._reset(copy.deepcopy(sync_data)) is False:
                 logging.error("Reset target after program error.")
                 return False
         end_time = time.time()
@@ -308,16 +309,12 @@ class DAPLinkHandleThread(QThread):
         return True
 
     def _read_flash(self) -> bool:
-        data = self.sync_data.get('data', [])
-        if len(data) != 3:
-            logging.error("Read flash data error.")
-            return False
-        settings_data = data[2]
-        if self._parse_algorithm(settings_data) is False:
+        if self._parse_algorithm() is False:
             return False
         sync_data = DAPLinkSyncData.get_sync_data()
         sync_data['operation'] = DAPLinkOperation.ReadFlash
         sync_data['status'] = False
+        data = self.sync_data.get('data', [])
         read_data = data[1]
         read_start_addr = read_data[0] - read_data[0] % 4
         read_end_addr = read_data[0] + read_data[1]
@@ -346,8 +343,8 @@ class DAPLinkHandleThread(QThread):
         self.dap_link_handle_sync_signal.emit(copy.deepcopy(sync_data))
         return True
 
-    def _reset(self, sync_data, settings_data) -> bool:
-        reset_mode = settings_data['dap']['reset']
+    def _reset(self, sync_data) -> bool:
+        reset_mode = self.settingsdata['dap']['reset']
         if reset_mode == "自动":
             reset_mode = 'software'
         elif reset_mode == "软件复位":
@@ -372,20 +369,58 @@ class DAPLinkHandleThread(QThread):
         res = False
         sync_data['suboperation'] = DAPLinkOperation.Erase
         if erase_addr != 0 and erase_size != 0:
-            sector_size = self.parse.flash_device.sectors[0].szSector
-            erase_start_addr = erase_addr - erase_addr % sector_size
             erase_end_addr = erase_addr + erase_size
-            if erase_end_addr >= (self.parse.flash_device.DevAdr + self.parse.flash_device.szDev):
+            if erase_end_addr > (self.parse.flash_device.DevAdr + self.parse.flash_device.szDev):
                 logging.warning(f"Erase end address out of range(end address: 0x{erase_end_addr:08X}), only erase to max address.")
                 erase_end_addr = self.parse.flash_device.DevAdr + self.parse.flash_device.szDev
-            # 计算需要擦除的扇区数量
-            sector_num = (erase_end_addr - erase_start_addr + sector_size - 1) // sector_size
-            if erase_end_addr - erase_start_addr == self.parse.flash_device.szDev:
+
+            if erase_end_addr - erase_addr > self.parse.flash_device.szDev - self.parse.flash_device.sectors[0].szSector:
                 if self._erase_target_erase_chip(sync_data):
                     res = True
             else:
-                if self._erase_target_erase_sector(sync_data, erase_start_addr, sector_num, sector_size):
-                    res = True
+                if self.parse.flash_device.numSec == 1:
+                    sector_size = self.parse.flash_device.sectors[0].szSector
+                    erase_start_addr = erase_addr - (erase_addr % sector_size)
+                    # 计算需要擦除的扇区数量
+                    sector_num = (erase_end_addr - erase_start_addr + sector_size - 1) // sector_size
+                    if self._erase_target_erase_sector(sync_data, erase_start_addr, sector_num, sector_size):
+                        res = True
+                else:
+                    start_location = 0
+                    offset = erase_addr - self.parse.flash_device.DevAdr
+                    numSec = self.parse.flash_device.numSec
+                    if offset >= self.parse.flash_device.sectors[numSec - 1].AddrSector:
+                        start_location = numSec - 1
+                    else:
+                        for i in range(self.parse.flash_device.numSec - 1):
+                            if offset >= self.parse.flash_device.sectors[i].AddrSector and \
+                                offset < self.parse.flash_device.sectors[i + 1].AddrSector:
+                                start_location = i
+                                break
+                    erase_start_addr = erase_addr - (erase_addr % self.parse.flash_device.sectors[start_location].szSector)
+                    offset = erase_end_addr - self.parse.flash_device.DevAdr
+                    rest_erase = erase_end_addr - erase_start_addr
+                    while rest_erase > 0:
+                        sector_size = self.parse.flash_device.sectors[start_location].szSector
+                        if start_location != (numSec - 1):
+                            if rest_erase + offset >= self.parse.flash_device.sectors[start_location + 1].AddrSector:
+                                sector_num = (self.parse.flash_device.sectors[start_location + 1].AddrSector - offset + sector_size - 1) // sector_size
+                                if self._erase_target_erase_sector(sync_data, erase_start_addr, sector_num, sector_size) is False:
+                                    return False
+                                erase_start_addr += sector_size * sector_num
+                                rest_erase -= sector_size * sector_num
+                            else:
+                                sector_num = (rest_erase + sector_size - 1) // sector_size
+                                if self._erase_target_erase_sector(sync_data, erase_start_addr, sector_num, sector_size) is False:
+                                    return False
+                                res = True
+                                break
+                        else:
+                            sector_num = (rest_erase + sector_size - 1) // sector_size
+                            if self._erase_target_erase_sector(sync_data, erase_start_addr, sector_num, sector_size) is False:
+                                return False
+                            res = True
+                            break
         return res
 
     def _erase_target_erase_chip(self, sync_data) -> bool:
@@ -503,12 +538,12 @@ class DAPLinkHandleThread(QThread):
                 self.dap_handle.unconfig_dap_device()
         return res
 
-    def _download_algorithm(self, sync_data, settings_data) -> bool:
+    def _download_algorithm(self, sync_data) -> bool:
         res = False
         sync_data['suboperation'] = DAPLinkOperation.DownloadAlgorithm
         sync_data['status'] = False
-        verify_flag = settings_data['dap']['verify']
-        if self._parse_algorithm(settings_data):
+        verify_flag = self.settingsdata['dap']['verify']
+        if self._parse_algorithm():
             start_addr = self.parse.flash_algo.AlgoStart
             algo = self.parse.flash_algo.AlgoBlob
             algo_size = self.parse.flash_algo.AlgoSize
@@ -523,9 +558,9 @@ class DAPLinkHandleThread(QThread):
         self.dap_link_handle_sync_signal.emit(copy.deepcopy(sync_data))
         return res
 
-    def _parse_algorithm(self, settings_data) -> bool:
-        device = settings_data['target']['device']
-        f_path = settings_data['target']['algorithm']
+    def _parse_algorithm(self) -> bool:
+        device = self.settingsdata['target']['device']
+        f_path = self.settingsdata['target']['algorithm']
         if not device or not f_path:
             logging.error("No device or algorithm file specified.")
             return False
@@ -636,6 +671,48 @@ class DAPLinkHandleThread(QThread):
             sync_data['status'] = True
         self.dap_link_handle_sync_signal.emit(copy.deepcopy(sync_data))
         return True
+
+    def _settings_data(self) -> bool:
+        sync_data = DAPLinkSyncData.get_sync_data()
+        sync_data['operation'] = DAPLinkOperation.SettingsData
+        sync_data['status'] = False
+        data = self.sync_data.get('data', [])
+        if data:
+            self.settingsdata = copy.deepcopy(data[0])
+            swj_clock = self._get_settingsdata_clock(self.settingsdata['dap']['clock'])
+            self.dap_handle.set_dap_swj_clock(swj_clock)
+            sync_data['status'] = True
+        self.dap_link_handle_sync_signal.emit(copy.deepcopy(sync_data))
+        return True
+
+    def _get_settingsdata_clock(self, clock_str: str) -> int:
+        """
+        # 10MHz, 5MHz, 2MHz, 1MHz, 500KHz, 200KHz, 100KHz, 50KHz, 20KHz, 10KHz
+        # """
+        match clock_str:
+            case "10MHz":
+                clock = 10000000
+            case "5MHz":
+                clock = 5000000
+            case "2MHz":
+                clock = 2000000
+            case "1MHz":
+                clock = 1000000
+            case "500KHz":
+                clock = 500000
+            case "200KHz":
+                clock = 200000
+            case "100KHz":
+                clock = 100000
+            case "50KHz":
+                clock = 50000
+            case "20KHz":
+                clock = 20000
+            case "10KHz":
+                clock = 10000
+            case _:
+                clock = 5000000
+        return clock
 
     def get_sync_data(self, sync_data: dict):
         self.sync_data = copy.deepcopy(sync_data)

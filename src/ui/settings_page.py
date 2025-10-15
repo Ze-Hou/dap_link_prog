@@ -1,4 +1,3 @@
-import logging
 from PyQt5.QtCore import (
     QEvent,
     Qt,
@@ -20,7 +19,6 @@ import copy
 from src.component.run_env import RunEnv
 from src.ui.dap_link_prog_icon import DAPIcon
 from src.ui.dap_link_style import DAPLinkStyle
-from src.ui.dap_link_handle_thread import DAPLinkHandleThread, DAPLinkSyncData, DAPLinkOperation
 
 
 class SettingsData:
@@ -52,12 +50,9 @@ class SettingsData:
 
 class SettingsDialog(QDialog):
     settings_sync_signal = pyqtSignal(dict)
-    def __init__(self, parent=None, settings_data: dict={}):
+    def __init__(self, parent=None, settings_data: dict={}, device_info: list = []):
         super().__init__(parent)
-        self.dap_handle_thread = DAPLinkHandleThread()
-        self.dap_handle_thread.dap_link_handle_sync_signal.connect(self._handle_sync_data)
-        self.settings_sync_signal.connect(self.dap_handle_thread.get_sync_data)
-        self.all_device_info = []
+        self.all_device_info = device_info
         if not settings_data:
             self.settings_data = SettingsData.get_settings_data()
         else:
@@ -117,10 +112,7 @@ class SettingsDialog(QDialog):
 
         self._set_page_0_context()
         # 获取可用设备信息
-        sync_data = DAPLinkSyncData.get_sync_data()
-        sync_data['operation'] = DAPLinkOperation.GetDeviceInfo
-        self.settings_sync_signal.emit(sync_data)
-        self.dap_handle_thread.start()
+        self._get_device_info()
 
     def event(self, event):
         """
@@ -206,22 +198,8 @@ class SettingsDialog(QDialog):
     def _on_comboBox_1_4_activated(self, text):
         self.settings_data['target']['algorithm'] = self.comboBox_1_4.currentData(Qt.ItemDataRole.UserRole)
 
-    def _handle_sync_data(self, sync_data: dict):
-        operation = sync_data.get('operation')
-        if not operation:
-            logging.error("no operation specified in sync data.")
-            return
-        if sync_data['status'] is not True:
-            logging.error(f"{operation.value} failed.")
-            return
-
-        match operation:
-            case DAPLinkOperation.GetDeviceInfo:
-                self._get_device_info(sync_data)
-
-    def _get_device_info(self, sync_data: dict):
+    def _get_device_info(self):
         device = []
-        self.all_device_info = sync_data.get('data', [])
         for info in self.all_device_info:
             device.append(info['device'])
 

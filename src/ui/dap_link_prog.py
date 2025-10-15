@@ -59,6 +59,11 @@ class DAPLinkProgUI(QMainWindow):
         self.log_signal.connect(self._handle_log)
 
         self.settings_data = SettingsData.get_settings_data()
+        sync_data = DAPLinkSyncData.get_sync_data()
+        sync_data['operation'] = DAPLinkOperation.SettingsData
+        sync_data['data'] = [self.settings_data]
+        self.dap_link_prog_sync_signal.emit(sync_data)
+        self.dap_handle_thread.start()
 
         # 加载 UI 文件
         uic.loadUi(RunEnv.parse_path("./src/ui/main_page.ui"), self)
@@ -224,6 +229,8 @@ class DAPLinkProgUI(QMainWindow):
     def _init_log_text_display_area(self):
         self.log_textBrowser.setStyleSheet(DAPLinkStyle.MainPage.get_text_browser_style())
         self.log_textBrowser.setGraphicsEffect(DAPLinkStyle.MainPage.get_text_browser_shadow_effect())
+        for handler in logging.root.handlers[:]:
+            logging.root.removeHandler(handler)
         logging.getLogger().setLevel(logging.INFO)
         logging.getLogger().addHandler(LoggingHandler(self.log_signal))
 
@@ -287,7 +294,7 @@ class DAPLinkProgUI(QMainWindow):
 
         sync_data = DAPLinkSyncData.get_sync_data()
         sync_data['operation'] = DAPLinkOperation.Reset
-        sync_data['data'] = [self._get_current_dap_device(), self.settings_data]
+        sync_data['data'] = [self._get_current_dap_device()]
         self.dap_link_prog_sync_signal.emit(sync_data)
         self.dap_handle_thread.start()
 
@@ -302,7 +309,7 @@ class DAPLinkProgUI(QMainWindow):
             erase_size = int(erase_config.lineEdit_2.text(), 0)
             sync_data = DAPLinkSyncData.get_sync_data()
             sync_data['operation'] = DAPLinkOperation.Erase
-            sync_data['data'] = [(self._get_current_dap_device()), (start_addr, erase_size), self.settings_data]
+            sync_data['data'] = [(self._get_current_dap_device()), (start_addr, erase_size)]
             self._set_progress_value(0, "E:")
             self.dap_link_prog_sync_signal.emit(sync_data)
             self.dap_handle_thread.start()
@@ -320,7 +327,7 @@ class DAPLinkProgUI(QMainWindow):
             read_size = int(read_flash_config.lineEdit_2.text(), 0)
             sync_data = DAPLinkSyncData.get_sync_data()
             sync_data['operation'] = DAPLinkOperation.ReadFlash
-            sync_data['data'] = [(self._get_current_dap_device()), (start_addr, read_size), self.settings_data]
+            sync_data['data'] = [(self._get_current_dap_device()), (start_addr, read_size)]
             self._set_progress_value(0, "R:")
             self.dap_link_prog_sync_signal.emit(sync_data)
             self.dap_handle_thread.start()
@@ -332,7 +339,7 @@ class DAPLinkProgUI(QMainWindow):
             return
         sync_data = DAPLinkSyncData.get_sync_data()
         sync_data['operation'] = DAPLinkOperation.Program
-        sync_data['data'] = [(self._get_current_dap_device()), self.settings_data]
+        sync_data['data'] = [(self._get_current_dap_device())]
         self._set_progress_value(0, "P:")
         self.dap_link_prog_sync_signal.emit(sync_data)
         self.dap_handle_thread.start()
@@ -344,12 +351,10 @@ class DAPLinkProgUI(QMainWindow):
         return False
 
     def _settings_dialog(self):
-        settings_dialog = SettingsDialog(parent=self, settings_data=self.settings_data)
-        res = settings_dialog.exec_()
-        if res == QDialog.Accepted:
-            self.settings_data = settings_dialog.get_settings_data()
-        elif res == QDialog.Rejected:
-            pass
+        sync_data = DAPLinkSyncData.get_sync_data()
+        sync_data['operation'] = DAPLinkOperation.GetDeviceInfo
+        self.dap_link_prog_sync_signal.emit(sync_data)
+        self.dap_handle_thread.start()
 
     def _update_time(self, time_label):
         current_time = QTime.currentTime().toString("HH:mm:ss")
@@ -448,8 +453,14 @@ class DAPLinkProgUI(QMainWindow):
             case DAPLinkOperation.ReadFlash:
                 self._handle_sync_data_read_flash(sync_data)
 
+            case DAPLinkOperation.GetDeviceInfo:
+                self._handle_sync_data_get_device_info(sync_data)
+
             case DAPLinkOperation.SelectProgFile:
                 self._handle_sync_data_select_prog_file(sync_data)
+
+            case DAPLinkOperation.SettingsData:
+                self._handle_sync_data_settings_data(sync_data)
 
     def _handle_sync_data_refresh_dap(self, sync_data: dict):
         item_count = self.dap_comboBox.count()
@@ -541,6 +552,20 @@ class DAPLinkProgUI(QMainWindow):
         elif res == QDialog.Rejected:
             logging.info("flash data table dialog rejected.")
 
+    def _handle_sync_data_get_device_info(self, sync_data: dict):
+        device_info = sync_data.get('data', [])
+        settings_dialog = SettingsDialog(parent=self, settings_data=self.settings_data, device_info=device_info)
+        res = settings_dialog.exec_()
+        if res == QDialog.Accepted:
+            self.settings_data = settings_dialog.get_settings_data()
+            sync_data = DAPLinkSyncData.get_sync_data()
+            sync_data['operation'] = DAPLinkOperation.SettingsData
+            sync_data['data'] = [self.settings_data]
+            self.dap_link_prog_sync_signal.emit(sync_data)
+            self.dap_handle_thread.start()
+        elif res == QDialog.Rejected:
+            pass
+
     def _handle_sync_data_select_prog_file(self, sync_data: dict):
         data = sync_data.get('data', [])
         if data and len(data) == 2:
@@ -552,6 +577,9 @@ class DAPLinkProgUI(QMainWindow):
             self.label_8.setText("null")
             self.label_8.setToolTip("null")
             logging.error("Invalid data received for SelectProgFile operation.")
+
+    def _handle_sync_data_settings_data(self, sync_data: dict):
+        pass
 
     def _handle_sync_data_suboperation(self, sync_data: dict):
         operation = sync_data.get('operation')

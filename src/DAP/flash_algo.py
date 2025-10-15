@@ -45,6 +45,7 @@ class FlashDevice(ctypes.LittleEndianStructure):
         ('toProg',      ctypes.c_uint32),               # Time Out of Program Page Function
         ('toErase',     ctypes.c_uint32),               # Time Out of Erase Sector Function
         ('sectors',     FlashSectors * FlashDefine.SECTOR_NUM),    # Sectors Information
+        ('numSec',      ctypes.c_uint32),               # Number of Sectors in Flash Device
     ]
 
 
@@ -92,14 +93,20 @@ class ParseElfFile(ELFFile):
                 return False
 
             info = symbols['FlashDevice']
-            data = self._get_elf_segments_data(info.value, ctypes.sizeof(FlashDevice), \
+            data = self._get_elf_segments_data(info.value, ctypes.sizeof(FlashDevice) - 4, \
                                                self.SEGMENT_FLAGS['PF_R'] | self.SEGMENT_FLAGS['PF_MASKPROC'])
 
-            if data is None or len(data) < ctypes.sizeof(FlashDevice):
+            if data is None or len(data) != ctypes.sizeof(FlashDevice) - 4:
                 logging.error("Invalid FlashDevice data segment.")
                 return False
 
-            self.flash_device = FlashDevice.from_buffer_copy(data)
+            self.flash_device = FlashDevice.from_buffer_copy(data + b'\x00\x00\x00\x00')
+
+            for i in range(FlashDefine.SECTOR_NUM):
+                if (self.flash_device.sectors[i].szSector == FlashDefine.SECTOR_END[0] and \
+                    self.flash_device.sectors[i].AddrSector == FlashDefine.SECTOR_END[1]):
+                    self.flash_device.numSec = i
+                    break
 
             data = self._get_elf_algo_data()
             if data is None:
