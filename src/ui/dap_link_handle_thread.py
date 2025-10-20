@@ -326,7 +326,7 @@ class DAPLinkHandleThread(QThread):
             logging.error("Read flash size is 0.")
             return False
 
-        if read_end_addr >= (self.parse.flash_device.DevAdr + self.parse.flash_device.szDev):
+        if read_end_addr > (self.parse.flash_device.DevAdr + self.parse.flash_device.szDev):
             logging.warning(f"Read flash end address out of range(end address: 0x{read_end_addr:08X}), only read to max address.")
             read_end_addr = self.parse.flash_device.DevAdr + self.parse.flash_device.szDev
 

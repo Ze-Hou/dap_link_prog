@@ -47,7 +47,7 @@ class HexBinTool:
         ret = self.get_parse_data_info()
         base_addr = 0
         segment_addr = 0
-        last_addr = 0
+        next_addr = -1
         count = -1
         for line in lines:
             if line[0] != ord(':'):
@@ -57,12 +57,12 @@ class HexBinTool:
             if type == self.HEX_TYPE_DATA:
                 length = int(line[1:3], 16)
                 addr = int(line[3:7], 16) + base_addr + segment_addr
-                if addr != last_addr + length or last_addr == 0:
+                if addr != next_addr or next_addr == -1:
                     ret['data'].append(bytearray())
                     ret['addr'].append(addr)
                     ret['size'].append(0)
                     ret['count'] += 1
-                last_addr = addr
+                next_addr = addr + length
                 # 处理数据
                 data = bytes.fromhex(line[9:9 + length * 2].decode('utf-8'))
                 checksum = length + (addr >> 8) + (addr & 0xFF) + type
